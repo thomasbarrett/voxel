@@ -1,4 +1,3 @@
-
 var cubeRotation = 0.0;
 var translation = [0.0,-4.0,0.0]
 
@@ -10,7 +9,7 @@ let chunkCount = 32
 let chunkSize = 16
 let blockCount = chunkSize * chunkSize
 
-let velocity = 5.0;
+let velocity = 20.0;
 let w = false;
 let a = false;
 let s = false;
@@ -175,7 +174,7 @@ function main() {
 
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
-  const buffers = initBuffers(gl);
+  const buffers = new World(gl, Math.random());
 
   const texture = loadTexture(gl, '../textures/cubetexture.png');
 
@@ -192,245 +191,6 @@ function main() {
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
-}
-
-//
-// initBuffers
-//
-// Initialize the buffers we'll need. For this demo, we just
-// have one object -- a simple three-dimensional cube.
-//
-function initBuffers(gl) {
-
-  noise.seed(Math.random());
-
-  let chunk_buffers = []
-
-  for (let chunk_index_x = 0; chunk_index_x < chunkCount; chunk_index_x++) {
-    for (let chunk_index_y = 0; chunk_index_y < chunkCount; chunk_index_y++) {
-
-  // Create a buffer for the cube's vertex positions.
-
-  const positionBuffer = gl.createBuffer();
-
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  let positions = []
-
-  const single_positions = [
-    // Front face
-    -1.0, -1.0,  1.0,
-     1.0, -1.0,  1.0,
-     1.0,  1.0,  1.0,
-    -1.0,  1.0,  1.0,
-
-    // Back face
-    -1.0, -1.0, -1.0,
-    -1.0,  1.0, -1.0,
-     1.0,  1.0, -1.0,
-     1.0, -1.0, -1.0,
-
-    // Top face
-    -1.0,  1.0, -1.0,
-    -1.0,  1.0,  1.0,
-     1.0,  1.0,  1.0,
-     1.0,  1.0, -1.0,
-
-    // Bottom face
-    -1.0, -1.0, -1.0,
-     1.0, -1.0, -1.0,
-     1.0, -1.0,  1.0,
-    -1.0, -1.0,  1.0,
-
-    // Right face
-     1.0, -1.0, -1.0,
-     1.0,  1.0, -1.0,
-     1.0,  1.0,  1.0,
-     1.0, -1.0,  1.0,
-
-    // Left face
-    -1.0, -1.0, -1.0,
-    -1.0, -1.0,  1.0,
-    -1.0,  1.0,  1.0,
-    -1.0,  1.0, -1.0,
-  ];
-
-  // Now create an array of positions for the cube.
-  for (let i = 0; i < chunkSize; i++) {
-    for (let j = 0; j < chunkSize; j++) {
-      let x = i + chunk_index_x * chunkSize
-      let y = j + chunk_index_y * chunkSize
-      var value = noise.simplex2(x / 50, y / 50);
-      // let location = [2 * x, (-4.0 + Math.round(10 * value)) * 2, -y * 2]
-      let location = [2 * x, (-4.0 + Math.round(10 * value)) * 2, -y * 2]
-
-      single_positions.forEach((position, index) => {
-        positions.push(position + location[index % 3])
-      });
-    }
-  }
-
-  // Now pass the list of positions into WebGL to build the
-  // shape. We do this by creating a Float32Array from the
-  // JavaScript array, then use it to fill the current buffer.
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  // Set up the normals for the vertices, so that we can compute lighting.
-
-  const normalBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-
-  let vertexNormals = []
-  const single_vertexNormals = [
-    // Front
-     0.0,  0.0,  1.0,
-     0.0,  0.0,  1.0,
-     0.0,  0.0,  1.0,
-     0.0,  0.0,  1.0,
-
-    // Back
-     0.0,  0.0, -1.0,
-     0.0,  0.0, -1.0,
-     0.0,  0.0, -1.0,
-     0.0,  0.0, -1.0,
-
-    // Top
-     0.0,  1.0,  0.0,
-     0.0,  1.0,  0.0,
-     0.0,  1.0,  0.0,
-     0.0,  1.0,  0.0,
-
-    // Bottom
-     0.0, -1.0,  0.0,
-     0.0, -1.0,  0.0,
-     0.0, -1.0,  0.0,
-     0.0, -1.0,  0.0,
-
-    // Right
-     1.0,  0.0,  0.0,
-     1.0,  0.0,  0.0,
-     1.0,  0.0,  0.0,
-     1.0,  0.0,  0.0,
-
-    // Left
-    -1.0,  0.0,  0.0,
-    -1.0,  0.0,  0.0,
-    -1.0,  0.0,  0.0,
-    -1.0,  0.0,  0.0
-  ];
-
-  for (let i = 0; i < chunkSize; i++) {
-    for (let j = 0; j < chunkSize; j++) {
-      single_vertexNormals.forEach((normal) => {
-        vertexNormals.push(normal)
-      });
-    }
-  }
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals),
-                gl.STATIC_DRAW);
-
-  // Now set up the texture coordinates for the faces.
-
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-
-  let textureCoordinates = []
-  const single_textureCoordinates = [
-    // Front
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-    // Back
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-    // Top
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-    // Bottom
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-    // Right
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-    // Left
-    0.0,  0.0,
-    1.0,  0.0,
-    1.0,  1.0,
-    0.0,  1.0,
-  ];
-
-  for (let i = 0; i < chunkSize; i++) {
-    for (let j = 0; j < chunkSize; j++) {
-      single_textureCoordinates.forEach((coord) => {
-        textureCoordinates.push(coord)
-      });
-    }
-  }
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates),
-                gl.STATIC_DRAW);
-
-  // Build the element array buffer; this specifies the indices
-  // into the vertex arrays for each face's vertices.
-
-  const indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-  // This array defines each face as two triangles, using the
-  // indices into the vertex array to specify each triangle's
-  // position.
-
-  let indices = []
-  const single_indices = [
-    0,  1,  2,      0,  2,  3,    // front
-    4,  5,  6,      4,  6,  7,    // back
-    8,  9,  10,     8,  10, 11,   // top
-    12, 13, 14,     12, 14, 15,   // bottom
-    16, 17, 18,     16, 18, 19,   // right
-    20, 21, 22,     20, 22, 23,   // left
-  ];
-
-  for (let i = 0; i < chunkSize; i++) {
-    for (let j = 0; j < chunkSize; j++) {
-    
-      let offset = 24 * (i * chunkSize + j)
-      single_indices.forEach((index) => {
-        indices.push(index + offset)
-      });
-    }
-  }
-
-
-  // Now send the element array to GL
-
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-      new Uint16Array(indices), gl.STATIC_DRAW);
-
-  chunk_buffers.push({
-    position: positionBuffer,
-    normal: normalBuffer,
-    textureCoord: textureCoordBuffer,
-    indices: indexBuffer,
-  });
-
-  }
-}
-  console.log(chunk_buffers)
-  return chunk_buffers;
 }
 
 //
@@ -490,7 +250,7 @@ function isPowerOf2(value) {
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, chunk_buffers, texture, deltaTime) {
+function drawScene(gl, programInfo, world, texture, deltaTime) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
     gl.clearDepth(1.0);                 // Clear everything
     gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -501,7 +261,7 @@ function drawScene(gl, programInfo, chunk_buffers, texture, deltaTime) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
 
-   chunk_buffers.forEach(buffers => {
+    world.chunks.forEach(buffers => {
    
     // Create a perspective matrix, a special matrix that is
     // used to simulate the distortion of perspective in a camera.
@@ -644,6 +404,12 @@ function drawScene(gl, programInfo, chunk_buffers, texture, deltaTime) {
   let velocityVectorLeft = vec3.create();
   vec3.rotateY(velocityVector, [0,0, velocity], [0,0,0], -cameraTheta);
   vec3.rotateY(velocityVectorLeft, velocityVector, [0,0,0], Math.PI / 2.0);
+  
+  let currentChunk = [-Math.floor(translation[0] / world.chunkSize) / 2.0, Math.floor(translation[2] / world.chunkSize) / 2.0 ]
+  if (currentChunk[0] != world.centerChunk[0] || currentChunk[1] != world.centerChunk[1]) {
+      world.centerChunk = currentChunk;
+      world.populateChunks();
+  }
 
   if (w) {
     translation[0] += deltaTime * velocityVector[0];
