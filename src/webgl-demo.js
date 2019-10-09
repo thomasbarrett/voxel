@@ -287,6 +287,7 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
     mat4.rotateX(projectionMatrix, projectionMatrix, cameraPhi)
     mat4.rotateY(projectionMatrix, projectionMatrix, cameraTheta)
     mat4.translate(projectionMatrix, projectionMatrix, translation)
+    
     // Set the drawing position to the "identity" point, which is
     // the center of the scene.
     const modelViewMatrix = mat4.create();
