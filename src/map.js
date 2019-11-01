@@ -15,7 +15,11 @@ class Chunk {
             for (let z = 0; z < chunkSize; z++) {
                 let height = 75 + Math.round(5 * noise.simplex2((x + this.index[0] * this.chunkSize)/40, (z + this.index[1] * this.chunkSize)/40));
                 for (let y = 0; y < height; y++) {
-                    this.setBlock(x, y, z, 1);
+                    if (y < height - 1) {
+                        this.setBlock(x, y, z, 2);
+                    } else {
+                        this.setBlock(x, y, z, 1);
+                    }
                 }
             }
         }
@@ -133,42 +137,88 @@ class Chunk {
         let textureCoordinates = []
         const single_textureCoordinates = [
             // Front
-            0.125,  0.0625,
             0.1875,  0.0625,
             0.1875,  0.0,
-            0.125,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
+
             // Back
-            0.125,  0.0625,
-            0.125,  0.0,
-            0.1875,  0.0,
             0.1875,  0.0625,
+            0.1875,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
 
             // Top
-            0.0625,  0.0,
-            0.0625,  0.0625,
-            0.125,  0.0625,
-            0.125,  0.0,
-            // Bottom
-            0.0,  0.0,
-            1.0,  0.0,
-            1.0,  1.0,
-            0.0,  1.0,
-            // Right
-            0.125,  0.0625,
-            0.125,  0.0,
-            0.1875,  0.0,
             0.1875,  0.0625,
+            0.1875,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
+
+            // Bottom
+            0.1875,  0.0625,
+            0.1875,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
+            
+            // Right
+            0.1875,  0.0625,
+            0.1875,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
             
             // Left
-            0.125,  0.0625,
             0.1875,  0.0625,
             0.1875,  0.0,
-            0.125,  0.0,
+            0.25,  0.0,
+            0.25,  0.0625,
         ];
 
-        this.visible.forEach((block, i) => {
-            single_textureCoordinates.forEach((coord) => {
-                textureCoordinates.push(coord)
+        
+       
+      
+        this.visible.forEach((block) => {
+            if (selectedBlock)  {
+                let swc = selectedBlock.worldCoordinates();
+                let chunkX = Math.floor(swc[0] / buffers.chunkSize);
+                let chunkZ = Math.floor(-swc[2] / buffers.chunkSize);
+                let lx = swc[0] - chunkX * buffers.chunkSize;
+                let lz = -swc[2] - chunkZ * buffers.chunkSize;
+                let ly = swc[1]
+
+                if (this.index[0] == chunkX && this.index[1] == chunkZ && block[0] == lx && block[1] == ly && block[2] == lz) {
+                    single_textureCoordinates.forEach((coord, i) => {   
+                        if (i % 2 == 0) {
+                            textureCoordinates.push(coord + 0.1875)
+                        } else {
+                            textureCoordinates.push(coord  + 0.1875 )
+                        }
+                    });
+                    return;
+                }
+            }
+            
+            single_textureCoordinates.forEach((coord, i) => {   
+                switch(this.getBlock(...block)) {
+                    case 1: 
+                    if (i >= 16 && i < 24) {
+                        if (i % 2 == 0) {
+                            textureCoordinates.push(coord - 0.125)
+                        } else {
+                            textureCoordinates.push(coord)
+                        }
+                    } else {
+                        textureCoordinates.push(coord)
+                    }
+                    break;
+                    case 2: 
+                    if (i % 2 == 0) {
+                        textureCoordinates.push(coord - 0.1875)
+                    } else {
+                        textureCoordinates.push(coord)
+                    }
+                    break;
+
+                }
             });
         });
 

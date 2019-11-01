@@ -10,7 +10,7 @@ let cameraPhi = 0.0
 let chunkCount = 32
 let chunkSize = 16
 let blockCount = chunkSize * chunkSize
-let selectedBlock = null;
+selectedBlock = null;
 let currentChunk = 0;
 
 let velocity = 8.0;
@@ -102,7 +102,7 @@ function main() {
   document.exitPointerLock = document.exitPointerLock ||
                             document.mozExitPointerLock;
 
-  canvas.onclick = function() {
+  canvas.addEventListener('click', function() {
     canvas.requestPointerLock();
 
     if (selectedBlock) {
@@ -120,7 +120,7 @@ function main() {
         }
     }
    
-  }
+  });
 
   let updatePosition = function(e) {
     cameraTheta += e.movementX / canvas.clientWidth * Math.PI;
@@ -176,10 +176,11 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
     let collision = new CollisionSet(false, false, false, false, false, false);
     world.chunks.forEach(chunk => {
         chunk.physicsObjects.forEach((physicsObject) => {
-            if (true) {
+            if (distance(player.worldCoordinates(), physicsObject.worldCoordinates()) < 10) {
                 let x = physicsObject.x - player.x
                 let y = physicsObject.y - player.y
                 let z = physicsObject.z - player.z
+                let valid_times = []
 
                 let left = x - physicsObject.a;
                 let right = x + physicsObject.a;
@@ -196,51 +197,58 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
                 let back_t = back / collisionRay.z;
 
                 let left_p = multiply(collisionRay, left_t);
-                let left_i = left_t > -2
+                let left_i = left_t > -0.5
                             && left_p.y > bottom 
                             && left_p.y < top
                             && left_p.z > back
                             && left_p.z < front;
-
+                if (left_i) valid_times.push(left_t);
+                
                 let right_p = multiply(collisionRay, right_t);
-                let right_i = right_t >  -2
+                let right_i = right_t > -0.5
                             && right_p.y > bottom 
                             && right_p.y < top
                             && right_p.z > back
                             && right_p.z < front;
-                
+                if (right_i) valid_times.push(right_t);
+
                 let top_p = multiply(collisionRay, top_t);
-                let top_i = top_t >  -2
+                let top_i = top_t > -0.5
                             && top_p.x > left 
                             && top_p.x < right
                             && top_p.z > back
                             && top_p.z < front;
+                if (top_i) valid_times.push(top_t);
 
                 let bottom_p = multiply(collisionRay, bottom_t);
-                let bottom_i = bottom_t >  -2
+                let bottom_i = bottom_t > -0.5
                             && bottom_p.x > left 
                             && bottom_p.x < right
                             && bottom_p.z > back
                             && bottom_p.z < front;
+                if (bottom_i) valid_times.push(bottom_t);
+
 
                 let front_p = multiply(collisionRay, front_t);
-                let front_i = bottom_t >  -2
+                let front_i = front_t > -0.5
                             && front_p.x > left 
                             && front_p.x < right
                             && front_p.y > bottom
                             && front_p.y < top;
+                if (front_i) valid_times.push(front_t);
 
                 let back_p = multiply(collisionRay, back_t);
-                let back_i = bottom_t >  -2
+                let back_i = back_t > -0.5
                             && back_p.x > left 
                             && back_p.x < right
                             && back_p.y > bottom
                             && back_p.y < top;
-                
-                if (front_i || back_i || top_i || bottom_i || left_i || right_i) {
+                if (back_i) valid_times.push(back_t);
+
+                if (valid_times.length > 0) {
                     collisions.push({
                         physicsObject,
-                        t: Math.min(left_t, right_t, front_t, bottom_t, front_t, back_t)
+                        t: Math.min(...valid_times)
                     })
                 }   
             }         
@@ -288,7 +296,7 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
 
     mat4.rotateX(projectionMatrix, projectionMatrix, cameraPhi)
     mat4.rotateY(projectionMatrix, projectionMatrix, cameraTheta)
-    mat4.translate(projectionMatrix, projectionMatrix, [-player.x, -player.y - 1, -player.z])
+    mat4.translate(projectionMatrix, projectionMatrix, [-player.x, -player.y, -player.z])
 
     let velocityVector = vec3.create();
     let velocityVectorLeft = vec3.create();

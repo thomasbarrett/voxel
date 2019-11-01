@@ -112,3 +112,7 @@ function inside(p, box) {
     return p.x <= box.x + box.a && p.x >= box.x - box.a
         && p.y <= box.y + box.b && p.y >= box.y - box.b;
 }
+
+function distance(a, b) {
+    return Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])  + (b[2] - a[2]) * (b[2] - a[2]) )
+}
