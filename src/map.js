@@ -388,7 +388,7 @@ class World {
     constructor(gl, seed) {
         this.gl = gl;
         this.seed = seed;
-        this.viewRadius = 4;
+        this.viewRadius = 3;
         this.chunkSize = 16;
         this.chunks = [];
         this.savedChunks = [];

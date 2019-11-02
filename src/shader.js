@@ -37,6 +37,7 @@ function getProgramInfo(gl) {
 
     varying highp vec2 vTextureCoord;
     varying highp vec3 vLighting;
+    varying highp float vDistance;
 
     void main(void) {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
@@ -52,6 +53,7 @@ function getProgramInfo(gl) {
 
       highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
       vLighting = ambientLight + (directionalLightColor * directional);
+      vDistance = 1.0 + 0.001 * exp(distance(gl_Position.xyz, vec3(0.0,0.0,0.0))/5.0);
     }
   `;
 
@@ -60,13 +62,14 @@ function getProgramInfo(gl) {
   const fsSource = `
     varying highp vec2 vTextureCoord;
     varying highp vec3 vLighting;
+    varying highp float vDistance;
 
     uniform sampler2D uSampler;
 
     void main(void) {
       highp vec4 texelColor = texture2D(uSampler, vTextureCoord);
-
       gl_FragColor = vec4(texelColor.rgb * vLighting, texelColor.a);
+      gl_FragColor = (1.0 / vDistance)* gl_FragColor + (1.0 - 1.0 / vDistance) * vec4(0.554, 0.746, 0.988, 1.0);
     }
   `;
 
