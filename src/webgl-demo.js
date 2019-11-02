@@ -177,7 +177,7 @@ function main() {
 
   let programInfo = getProgramInfo(gl);
   buffers = new World(gl, Math.random());
-  const texture = loadTexture(gl, '../textures/blocks.png');
+  const texture = loadTexture(gl, './textures/blocks.png');
 
   var then = 0;
 
