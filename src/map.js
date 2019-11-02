@@ -2,6 +2,7 @@ class Chunk {
     constructor(world, gl, chunkSize, chunkX, chunkY) {
         this.world = world;
         this.index = [chunkX, chunkY]
+        this.block_update = true;
         this.chunkHeight = 256;
         this.blocks = new Uint8Array(chunkSize * chunkSize * 256);
         this.blocks.fill(0);
@@ -16,7 +17,16 @@ class Chunk {
                 let height = 75 + Math.round(5 * noise.simplex2((x + this.index[0] * this.chunkSize)/40, (z + this.index[1] * this.chunkSize)/40));
                 for (let y = 0; y < height; y++) {
                     if (y < height - 1) {
-                        this.setBlock(x, y, z, 2);
+                        let q = Math.random();
+                        if (0.4 < q && q < 0.5) {
+                            this.setBlock(x, y, z, 4);
+                        } else if (0.6 < q && q < 0.5) {
+                            this.setBlock(x, y, z, 3);
+                        } else if (0.7 < q && q < 0.8) {
+                            this.setBlock(x, y, z, 5);
+                        } else {
+                            this.setBlock(x, y, z, 2);
+                        }
                     } else {
                         this.setBlock(x, y, z, 1);
                     }
@@ -26,6 +36,11 @@ class Chunk {
     }
 
     getBuffers() {
+        if (this.block_update == false) {
+            return this.cached_buffers;
+        }
+        this.block_update = false;
+        console.log("generating buffers");
         let gl = this.gl;
         this.physicsObjects = [];
         this.visible = this.visibleBlocks();
@@ -35,6 +50,7 @@ class Chunk {
         let positions = []
         
         const single_positions = [
+            
             // Front face
             -1.0, -1.0,  1.0,
             1.0, -1.0,  1.0,
@@ -137,46 +153,45 @@ class Chunk {
         let textureCoordinates = []
         const single_textureCoordinates = [
             // Front
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0625,  0.0,
+            0.0625,  0.0625,
 
             // Back
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0635,  0.0,
+            0.0625,  0.0625,
 
             // Top
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0625,  0.0,
+            0.0625,  0.0625,
 
             // Bottom
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0625,  0.0,
+            0.0625,  0.0625,
             
             // Right
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0625,  0.0,
+            0.0625,  0.0625,
             
             // Left
-            0.1875,  0.0625,
-            0.1875,  0.0,
-            0.25,  0.0,
-            0.25,  0.0625,
+            0.0,  0.0625,
+            0.0,  0.0,
+            0.0625,  0.0,
+            0.0625,  0.0625,
         ];
 
         
-       
-      
         this.visible.forEach((block) => {
+            /*
             if (selectedBlock)  {
                 let swc = selectedBlock.worldCoordinates();
                 let chunkX = Math.floor(swc[0] / buffers.chunkSize);
@@ -196,28 +211,63 @@ class Chunk {
                     return;
                 }
             }
-            
-            single_textureCoordinates.forEach((coord, i) => {   
-                switch(this.getBlock(...block)) {
+            */
+           let q1 = Math.floor(Math.random() * 16);
+           let q2 = Math.floor(Math.random() * 16);
+
+            single_textureCoordinates.forEach((coord, i) => {  
+                let b = this.getBlock(...block); 
+                switch(b) {
                     case 1: 
                     if (i >= 16 && i < 24) {
                         if (i % 2 == 0) {
-                            textureCoordinates.push(coord - 0.125)
+                            textureCoordinates.push(coord + 0.0625 * 1)
                         } else {
                             textureCoordinates.push(coord)
                         }
                     } else {
-                        textureCoordinates.push(coord)
+                        if (i % 2 == 0) {
+                            textureCoordinates.push(coord + 0.0625 * 3)
+                        } else {
+                            textureCoordinates.push(coord)
+                        }
                     }
                     break;
                     case 2: 
                     if (i % 2 == 0) {
-                        textureCoordinates.push(coord - 0.1875)
+                        textureCoordinates.push(coord)
                     } else {
                         textureCoordinates.push(coord)
                     }
                     break;
-
+                    case 3: 
+                    if (i % 2 == 0) {
+                        textureCoordinates.push(coord)
+                    } else {
+                        textureCoordinates.push(coord + 0.0625)
+                    }
+                    break;
+                    case 4: 
+                    if (i % 2 == 0) {
+                        textureCoordinates.push(coord)
+                    } else {
+                        textureCoordinates.push(coord + 0.0625)
+                    }
+                    break;
+                    case 5: 
+                    if (i % 2 == 0) {
+                        textureCoordinates.push(coord)
+                    } else {
+                        textureCoordinates.push(coord + 0.0625)
+                    }
+                    break;
+                    default:
+      
+                        if (i % 2 == 0) {
+                            textureCoordinates.push(coord + q1 * 0.0625)
+                        } else {
+                            textureCoordinates.push(coord + q2 * 0.0625)
+                        }
                 }
             });
         });
@@ -246,13 +296,15 @@ class Chunk {
 
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-        return {
+        this.cached_buffers = {
             position: positionBuffer,
             normal: normalBuffer,
             textureCoord: textureCoordBuffer,
             indices: indexBuffer,
             blockCount: this.visible.length,
         }
+
+        return this.cached_buffers;
 
     }
 
@@ -288,6 +340,30 @@ class Chunk {
     }
 
     setBlock(x, y, z, b) {
+
+        if (x == 0) {
+            let adj = this.world.getChunk(this.index[0] - 1, this.index[1]);
+            if (adj) adj.block_update = true;
+        }
+        
+        if (z == 0) {
+            let adj = this.world.getChunk(this.index[0], this.index[1] - 1);
+            if (adj) adj.block_update = true;
+
+        }
+        
+        if (x == this.chunkSize - 1) {
+            let adj = this.world.getChunk(this.index[0] + 1, this.index[1]);
+            if (adj) adj.block_update = true;
+
+        }
+        
+        if (z == this.chunkSize - 1) {
+            let adj = this.world.getChunk(this.index[0], this.index[1] + 1);
+            if (adj) adj.block_update = true;
+        }
+
+        this.block_update = true;
         this.blocks[this.getIndex(x, y, z)] = b;
     }
 
@@ -312,9 +388,10 @@ class World {
     constructor(gl, seed) {
         this.gl = gl;
         this.seed = seed;
-        this.viewRadius = 3;
-        this.chunkSize = 8;
+        this.viewRadius = 4;
+        this.chunkSize = 16;
         this.chunks = [];
+        this.savedChunks = [];
         this.centerChunk = [0, 0];
         noise.seed(seed);
         this.populateChunks()
@@ -336,10 +413,23 @@ class World {
     populateChunks() {
         this.chunks = [];
         let center_x = this.centerChunk[0];
-        let center_z = this.centerChunk[1];        
+        let center_z = this.centerChunk[1]; 
+
         for (let chunk_x = -this.viewRadius; chunk_x < this.viewRadius; chunk_x++) {
             for (let chunk_z = -this.viewRadius; chunk_z < this.viewRadius; chunk_z++) {
-                this.chunks.push(new Chunk(this, this.gl, this.chunkSize, chunk_x + center_x, chunk_z + center_z)) 
+               
+                let saved = this.savedChunks.filter(c => {
+                    return c.index[0] == chunk_x + center_x && c.index[1] == chunk_z + center_z;
+                });
+                
+                if (saved.length > 0) {
+                    this.chunks.push(saved[0])
+                } else {
+                    let new_chunk = new Chunk(this, this.gl, this.chunkSize, chunk_x + center_x, chunk_z + center_z);
+                    this.chunks.push(new_chunk);
+                    this.savedChunks.push(new_chunk);
+                }
+
             }
         }
     }

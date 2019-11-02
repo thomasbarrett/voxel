@@ -3,14 +3,15 @@ let player = new PhysicsObject(0.0,165.0,0.0,0.5,2.0, 0.5);
 let verticalVelocity = 0.0
 
 let buffers = null;
-
+let fpsSpan = document.getElementById('fps');
 let cameraTheta = 0.0
 let cameraPhi = 0.0
 
 let chunkCount = 32
 let chunkSize = 16
 let blockCount = chunkSize * chunkSize
-selectedBlock = null;
+let selectedBlock = null;
+let selection = null;
 let currentChunk = 0;
 
 let velocity = 8.0;
@@ -18,10 +19,16 @@ let w = false;
 let a = false;
 let s = false;
 let d = false;
+let meta = false;
 let space = false;
 let shift = false;
 
+let fps_update_time_seconds = 3;
+let last_fps_update_time = new Date();
+let fps_count = 0;
+
 window.addEventListener("keyup", (event) => {
+
   switch(event.key) {
     case 'ArrowUp':
     case 'w':
@@ -49,6 +56,9 @@ window.addEventListener("keyup", (event) => {
         break;
     case 'Shift':
         shift = false;
+        break;
+    case 'Control':
+        meta = false;
         break;
     default:
       console.log("unknown key: " + event.key)
@@ -83,6 +93,9 @@ window.addEventListener("keydown", (event) => {
     case 'Shift':
       shift = true;
       break;
+    case 'Control':
+        meta = true;
+        break;
     default:
         console.log("unknown key: " + event.key)
   }
@@ -102,12 +115,30 @@ function main() {
   document.exitPointerLock = document.exitPointerLock ||
                             document.mozExitPointerLock;
 
-  canvas.addEventListener('click', function() {
+  canvas.addEventListener('click', function(event) {
     canvas.requestPointerLock();
-
-    if (selectedBlock) {
+    if (selectedBlock && meta) {
         let coords = selectedBlock.worldCoordinates();
         console.log(coords);
+        let chunkX = Math.floor(coords[0] / buffers.chunkSize);
+        let chunkZ = Math.floor(-coords[2] / buffers.chunkSize);
+    
+        let chunk = buffers.chunks.filter(chunk => {
+          return chunk.index[0] == chunkX && chunk.index[1] == chunkZ;
+        });
+            
+        if (chunk.length > 0) {
+            switch (selection.side) {
+            case 'top': chunk[0].setBlockWorld(coords[0], coords[1] + 1, -coords[2], Math.floor(Math.random() * 16)); break;
+            case 'bottom': chunk[0].setBlockWorld(coords[0], coords[1] - 1, -coords[2], Math.floor(Math.random() * 16)); break;
+            case 'front': chunk[0].setBlockWorld(coords[0], coords[1], -coords[2] - 1, Math.floor(Math.random() * 16)); break;
+            case 'back': chunk[0].setBlockWorld(coords[0], coords[1], -coords[2] + 1, Math.floor(Math.random() * 16)); break;
+            case 'left': chunk[0].setBlockWorld(coords[0] - 1, coords[1], -coords[2], Math.floor(Math.random() * 16)); break;
+            case 'right': chunk[0].setBlockWorld(coords[0] + 1, coords[1], -coords[2], Math.floor(Math.random() * 16)); break;
+            }
+        }
+    } else if (selectedBlock) {
+        let coords = selectedBlock.worldCoordinates();
         let chunkX = Math.floor(coords[0] / buffers.chunkSize);
         let chunkZ = Math.floor(-coords[2] / buffers.chunkSize);
     
@@ -245,10 +276,23 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
                             && back_p.y < top;
                 if (back_i) valid_times.push(back_t);
 
+                
+                let min_time = Math.min(...valid_times);
+                let side = null;
+                switch(min_time) {
+                    case top_t: side = 'top'; break;
+                    case bottom_t: side = 'bottom'; break;
+                    case front_t: side = 'front'; break;
+                    case back_t: side = 'back'; break;
+                    case left_t: side = 'left'; break;
+                    case right_t: side = 'right'; break;
+                }
+
                 if (valid_times.length > 0) {
                     collisions.push({
                         physicsObject,
-                        t: Math.min(...valid_times)
+                        t: min_time,
+                        side: side
                     })
                 }   
             }         
@@ -356,9 +400,11 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
     });
 
     if (collisions.length > 0) {
+        selection = collisions[0];
         selectedBlock = collisions[0].physicsObject;
     } else {
         selectedBlock = null;
+        selection = null;
     }
   
 
@@ -388,19 +434,26 @@ function drawScene(gl, programInfo, world, texture, deltaTime) {
         }
       }
   
-    /*
+    
     if (currentChunk[0] != world.centerChunk[0] || currentChunk[1] != world.centerChunk[1]) {
         world.centerChunk = currentChunk;
         world.populateChunks();
     }
-    */
    
     if (!collision.bottom) {
-        verticalVelocity += 24.0 * deltaTime;
+        player.y -= deltaTime * verticalVelocity;
+        verticalVelocity += 20.0 * deltaTime;
     } else if (verticalVelocity > 0) {
         verticalVelocity = 0.0
     }
 
-    player.y -= deltaTime * verticalVelocity;
-
+    let current_time = new Date();
+    let elapsed_time = current_time - last_fps_update_time;
+    if (elapsed_time > fps_update_time_seconds * 1000) {
+        fpsSpan.innerText = 'FPS: ' + fps_count / fps_update_time_seconds;
+        fps_count = 0;
+        last_fps_update_time = current_time;
+    } else {
+        fps_count++;
+    }
 }
