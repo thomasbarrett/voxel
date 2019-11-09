@@ -31,8 +31,6 @@ function getProgramInfo(gl) {
     attribute vec3 aVertexNormal;
     attribute vec2 aTextureCoord;
 
-    uniform mat4 uNormalMatrix;
-    uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
 
     varying highp vec2 vTextureCoord;
@@ -40,7 +38,7 @@ function getProgramInfo(gl) {
     varying highp float vDistance;
 
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionMatrix  * aVertexPosition;
       vTextureCoord = aTextureCoord;
 
       // Apply lighting effect
@@ -49,7 +47,7 @@ function getProgramInfo(gl) {
       highp vec3 directionalLightColor = vec3(1, 1, 1);
       highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
 
-      highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 0.5);
+      highp vec4 transformedNormal = vec4(aVertexNormal, 0.5);
 
       highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
       vLighting = ambientLight + (directionalLightColor * directional);
@@ -91,8 +89,6 @@ function getProgramInfo(gl) {
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-      normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
       uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
     },
   };

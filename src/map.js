@@ -89,7 +89,7 @@ class Chunk {
         ];
 
         this.visible.forEach(block => {
-            let location = [(block[0] + this.index[0] * this.chunkSize) * 2, block[1] * 2, -(block[2] + this.index[1] * this.chunkSize) * 2]   
+            let location = [(block[0] + this.index[0] * this.chunkSize) * 2, block[1] * 2, (block[2] + this.index[1] * this.chunkSize) * 2]   
             this.physicsObjects.push(new PhysicsObject(...location, 1, 1, 1));
             single_positions.forEach((position, index) => {
                 positions.push(position + location[index % 3])
@@ -388,6 +388,7 @@ class World {
     constructor(gl, seed) {
         this.gl = gl;
         this.seed = seed;
+        this.texture = loadTexture(gl, './textures/blocks.png');
         this.viewRadius = 3;
         this.chunkSize = 16;
         this.chunks = [];
@@ -410,6 +411,148 @@ class World {
         } else return -1;
     }
 
+    render(programInfo, projectionMatrix) {
+        let gl = this.gl;
+        gl.clearColor(0.554, 0.746, 0.988, 1.0); 
+        gl.clearDepth(1.0); 
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        this.chunks.forEach(chunk => {
+            let buffers = chunk.getBuffers();
+    
+            // Tell WebGL how to pull out the positions from the position
+            // buffer into the vertexPosition attribute
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    
+            // Tell WebGL how to pull out the texture coordinates from
+            // the texture coordinate buffer into the textureCoord attribute.
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+            gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+    
+            // Tell WebGL how to pull out the normals from
+            // the normal buffer into the vertexNormal attribute.
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+            gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, 3, gl.FLOAT,  false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
+    
+            // Tell WebGL which indices to use to index the vertices
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+            gl.useProgram(programInfo.program);
+            gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+    
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+    
+            gl.drawElements(gl.TRIANGLES, 36 * buffers.blockCount, gl.UNSIGNED_SHORT, 0)
+    
+       });
+    }
+
+
+    computeRayIntersection(player, collisionRay) {
+        let collisions = []
+        this.chunks.forEach(chunk => {
+            chunk.physicsObjects.forEach((physicsObject) => {
+                if (distance(player.worldCoordinates(), physicsObject.worldCoordinates()) < 10) {
+                    let x = physicsObject.x - player.x
+                    let y = physicsObject.y - player.y
+                    let z = physicsObject.z - player.z
+                    let valid_times = []
+
+                    let left = x - physicsObject.a;
+                    let right = x + physicsObject.a;
+                    let top = y + physicsObject.b;
+                    let bottom = y - physicsObject.b;
+                    let front = z + physicsObject.c;
+                    let back = z - physicsObject.c;
+
+                    let left_t = left / collisionRay.x;
+                    let right_t = right / collisionRay.x;
+                    let top_t = top / collisionRay.y;
+                    let bottom_t = bottom / collisionRay.y;
+                    let front_t = front / collisionRay.z;
+                    let back_t = back / collisionRay.z;
+
+                    let left_p = multiply(collisionRay, left_t);
+                    let left_i = left_t > -0.5
+                                && left_p.y > bottom 
+                                && left_p.y < top
+                                && left_p.z > back
+                                && left_p.z < front;
+                    if (left_i) valid_times.push(left_t);
+                    
+                    let right_p = multiply(collisionRay, right_t);
+                    let right_i = right_t > -0.5
+                                && right_p.y > bottom 
+                                && right_p.y < top
+                                && right_p.z > back
+                                && right_p.z < front;
+                    if (right_i) valid_times.push(right_t);
+
+                    let top_p = multiply(collisionRay, top_t);
+                    let top_i = top_t > -0.5
+                                && top_p.x > left 
+                                && top_p.x < right
+                                && top_p.z > back
+                                && top_p.z < front;
+                    if (top_i) valid_times.push(top_t);
+
+                    let bottom_p = multiply(collisionRay, bottom_t);
+                    let bottom_i = bottom_t > -0.5
+                                && bottom_p.x > left 
+                                && bottom_p.x < right
+                                && bottom_p.z > back
+                                && bottom_p.z < front;
+                    if (bottom_i) valid_times.push(bottom_t);
+
+
+                    let front_p = multiply(collisionRay, front_t);
+                    let front_i = front_t > -0.5
+                                && front_p.x > left 
+                                && front_p.x < right
+                                && front_p.y > bottom
+                                && front_p.y < top;
+                    if (front_i) valid_times.push(front_t);
+
+                    let back_p = multiply(collisionRay, back_t);
+                    let back_i = back_t > -0.5
+                                && back_p.x > left 
+                                && back_p.x < right
+                                && back_p.y > bottom
+                                && back_p.y < top;
+                    if (back_i) valid_times.push(back_t);
+
+                    
+                    let min_time = Math.min(...valid_times);
+                    let side = null;
+                    switch(min_time) {
+                        case top_t: side = 'top'; break;
+                        case bottom_t: side = 'bottom'; break;
+                        case front_t: side = 'front'; break;
+                        case back_t: side = 'back'; break;
+                        case left_t: side = 'left'; break;
+                        case right_t: side = 'right'; break;
+                    }
+
+                    if (valid_times.length > 0) {
+                        collisions.push({
+                            physicsObject,
+                            t: min_time,
+                            side: side
+                        })
+                    }   
+                }         
+            });
+        })
+        return collisions;
+    }
+    
     populateChunks() {
         this.chunks = [];
         let center_x = this.centerChunk[0];
