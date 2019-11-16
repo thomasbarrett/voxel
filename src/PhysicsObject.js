@@ -48,13 +48,14 @@ class PhysicsObject {
         let x = 0.0;
         let y = 0.0;
         let z = 0.0;
+        let epsilon = 0.0;
 
         if (this.x > obj.x && this.x - obj.x < this.a + obj.a) {
             x = (this.x - obj.x) - (this.a + obj.a);
         } else if (obj.x - this.x < this.a + obj.a) {
             x = (this.a + obj.a) - (obj.x - this.x);
         }
-        
+
         if (this.y > obj.y && this.y - obj.y < this.b + obj.b) {
             y = (this.y - obj.y) - (this.b + obj.b);
         } else if (obj.y - this.y < this.b + obj.b) {
@@ -68,16 +69,25 @@ class PhysicsObject {
         }
 
         let max = Math.min(Math.abs(x), Math.abs(y), Math.abs(z));
-        if (max == Math.abs(x)) {
-            return [x, 0, 0];
-        } else if (max == Math.abs(y)) {
-            return [0, y, 0];
-        } else if (max == Math.abs(z)) {
-            return [0, 0, z];
-        }
-    } 
+        let collisionSet = new CollisionSet(false, false, false, false, false, false);
+        collisionSet.resolve = [0,0,0];
+        collisionSet.time = Math.min(Math.abs(x), Math.abs(z));
 
-    
+        if (max == Math.abs(x)) {
+            collisionSet.left = x < 0;
+            collisionSet.right = x > 0; 
+            collisionSet.resolve = [x, 0, 0];
+        } else if (max == Math.abs(y)) {
+            collisionSet.top = y < 0;
+            collisionSet.bottom = y > 0; 
+            collisionSet.resolve = [0, y, 0];
+        } else if (max == Math.abs(z)) {
+            collisionSet.front = z < 0;
+            collisionSet.back = z > 0; 
+            collisionSet.resolve = [0, 0, z];
+        }
+        return collisionSet
+    } 
 }
 
 class CollisionRay {

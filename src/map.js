@@ -4,13 +4,13 @@ class Chunk {
         this.index = [chunkX, chunkY]
         this.block_update = true;
         this.chunkHeight = 256;
-        this.blocks = new Uint8Array(chunkSize * chunkSize * 256);
-        this.blocks.fill(0);
+        this.chunkBuffer = instance.exports.chunk_init(world.worldBuffer, chunkX, chunkY, 0);
         this.chunkSize = chunkSize;
         this.physicsObjects = [];
         this.visible = null;
         this.gl = gl;
 
+        /*
         // Now create an array of positions for the cube.
         for (let x = 0; x < chunkSize; x++) {
             for (let z = 0; z < chunkSize; z++) {
@@ -32,7 +32,7 @@ class Chunk {
                     }
                 }
             }
-        }
+        }*/
     }
 
     getBuffers() {
@@ -40,113 +40,27 @@ class Chunk {
             return this.cached_buffers;
         }
         this.block_update = false;
-        console.log("generating buffers");
         let gl = this.gl;
         this.physicsObjects = [];
         this.visible = this.visibleBlocks();
-
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        let positions = []
-        
-        const single_positions = [
-            
-            // Front face
-            -1.0, -1.0,  1.0,
-            1.0, -1.0,  1.0,
-            1.0,  1.0,  1.0,
-            -1.0,  1.0,  1.0,
-
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0,  1.0, -1.0,
-            1.0,  1.0, -1.0,
-            1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0,  1.0, -1.0,
-            -1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0,  1.0,
-            -1.0, -1.0,  1.0,
-
-            // Right face
-            1.0, -1.0, -1.0,
-            1.0,  1.0, -1.0,
-            1.0,  1.0,  1.0,
-            1.0, -1.0,  1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            -1.0,  1.0, -1.0,
-        ];
-
         this.visible.forEach(block => {
             let location = [(block[0] + this.index[0] * this.chunkSize) * 2, block[1] * 2, (block[2] + this.index[1] * this.chunkSize) * 2]   
             this.physicsObjects.push(new PhysicsObject(...location, 1, 1, 1));
-            single_positions.forEach((position, index) => {
-                positions.push(position + location[index % 3])
-            });
         });
 
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        instance.exports.chunk_update_buffers(this.chunkBuffer);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        let vertex_offset = instance.exports.chunk_get_vertex_buffer(this.chunkBuffer);
+        let vertex_length = instance.exports.chunk_visible_block_count(this.chunkBuffer) * 24 * 3;
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, vertex_offset, vertex_length), gl.STATIC_DRAW);
         
         const normalBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        let normal_offset = instance.exports.chunk_get_normal_buffer(this.chunkBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, normal_offset, vertex_length), gl.STATIC_DRAW);
 
-        let vertexNormals = []
-        const single_vertexNormals = [
-            // Front
-            0.0,  0.0,  1.0,
-            0.0,  0.0,  1.0,
-            0.0,  0.0,  1.0,
-            0.0,  0.0,  1.0,
-
-            // Back
-            0.0,  0.0, -1.0,
-            0.0,  0.0, -1.0,
-            0.0,  0.0, -1.0,
-            0.0,  0.0, -1.0,
-
-            // Top
-            0.0,  1.0,  0.0,
-            0.0,  1.0,  0.0,
-            0.0,  1.0,  0.0,
-            0.0,  1.0,  0.0,
-
-            // Bottom
-            0.0, -1.0,  0.0,
-            0.0, -1.0,  0.0,
-            0.0, -1.0,  0.0,
-            0.0, -1.0,  0.0,
-
-            // Right
-            1.0,  0.0,  0.0,
-            1.0,  0.0,  0.0,
-            1.0,  0.0,  0.0,
-            1.0,  0.0,  0.0,
-
-            // Left
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0
-        ];
-
-        this.visible.forEach((block, i) => {
-            single_vertexNormals.forEach((normal) => {
-                vertexNormals.push(normal)
-            });
-        });
-  
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
         const textureCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
@@ -313,7 +227,7 @@ class Chunk {
     }
     
     getBlock(x, y, z) {
-        return this.blocks[this.getIndex(x, y, z)];
+        return instance.exports.chunk_get(this.chunkBuffer, x, y, z);
     }
 
     getAdjacentBlocks(x, y, z) {
@@ -329,7 +243,8 @@ class Chunk {
     }
 
     isAdjacentToAir(x, y, z) {
-        return this.getAdjacentBlocks(x, y, z).filter(block => block == 0).length > 0;
+        //return this.getAdjacentBlocks(x, y, z).filter(block => block == 0).length > 0;
+        return instance.exports.chunk_is_block_visible(this.chunkBuffer, x, y, z);
     }
     
     setBlockWorld(wx, wy, wz, b) {
@@ -364,7 +279,7 @@ class Chunk {
         }
 
         this.block_update = true;
-        this.blocks[this.getIndex(x, y, z)] = b;
+        return instance.exports.chunk_set(this.chunkBuffer, x, y, z, b);
     }
 
     visibleBlocks() {
@@ -388,8 +303,9 @@ class World {
     constructor(gl, seed) {
         this.gl = gl;
         this.seed = seed;
+        this.worldBuffer = instance.exports.world_init();
         this.texture = loadTexture(gl, './textures/blocks.png');
-        this.viewRadius = 3;
+        this.viewRadius = 2;
         this.chunkSize = 16;
         this.chunks = [];
         this.savedChunks = [];
@@ -569,6 +485,7 @@ class World {
                     this.chunks.push(saved[0])
                 } else {
                     let new_chunk = new Chunk(this, this.gl, this.chunkSize, chunk_x + center_x, chunk_z + center_z);
+                    instance.exports.world_set_chunk(this.worldBuffer, chunk_x + center_x, chunk_z + center_z, new_chunk.chunkBuffer);
                     this.chunks.push(new_chunk);
                     this.savedChunks.push(new_chunk);
                 }

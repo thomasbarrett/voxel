@@ -1,7 +1,7 @@
 import { KeyboardInput } from './keyboard.js'
 import { FPSTracker } from './fps.js'
 
-let player = new PhysicsObject(0.0,165.0,0.0,0.5,2, 0.5);
+let player = new PhysicsObject(0.0,220.0,0.0,0.5,2, 0.5);
 let cameraTheta = 0.0
 let cameraPhi = 0.0
 let velocity = 8.0;
@@ -47,7 +47,15 @@ function create_projection_matrix(player, cameraPhi, cameraTheta, aspect, mode) 
     return projectionMatrix;
 }
 
-(function () {
+(async function () {
+  const { instance } = await WebAssembly.instantiateStreaming(
+    fetch("./wasm/chunk.wasm"), {
+      env: {
+        
+      }
+    }
+  );
+  window.instance = instance;
 
   canvas.addEventListener('click', function(event) {
     canvas.requestPointerLock();
@@ -162,12 +170,10 @@ function drawScene(gl, programInfo, world, deltaTime) {
         chunk.physicsObjects.forEach((physicsObject, index) => {
             if (physicsObject.collidesWith(player)) {
                 let c = physicsObject.collision(player);
-                player.x += c[0];
-                player.y += c[1];
-                if (c[1] > 0) {
-                    collision.bottom = true;
-                }
-                player.z += c[2];
+                player.x += c.resolve[0];
+                player.y += c.resolve[1];
+                player.z += c.resolve[2];
+                collision = collision.union(c);
                 if (c[1]) {
                     verticalVelocity = 0.0
                 }
