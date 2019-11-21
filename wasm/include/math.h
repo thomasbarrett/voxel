@@ -3,5 +3,7 @@
 
 float sqrt(float);
 float abs(float);
+float sin(float);
+float cos(float);
 
 #endif /* MATH_H */

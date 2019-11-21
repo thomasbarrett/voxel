@@ -12,6 +12,11 @@ typedef struct aabb3 {
     vec3_t size;
 } aabb3_t;
 
+typedef struct dyn_aabb3 {
+    aabb3_t base;
+    vec3_t velocity;
+} dyn_aabb3_t;
+
 typedef struct ray3 {
     vec3_t position;
     vec3_t direction;
@@ -41,6 +46,18 @@ float aabb3_position_z(const aabb3_t *self) {
     return self->position.z;
 }
 
+float dyn_aabb3_velocity_x(const dyn_aabb3_t *self) {
+    return self->velocity.x;
+}
+
+float dyn_aabb3_velocity_y(const dyn_aabb3_t *self) {
+    return self->velocity.y;
+}
+
+float dyn_aabb3_velocity_z(const dyn_aabb3_t *self) {
+    return self->velocity.z;
+}
+
 void aabb3_set_position_x(aabb3_t *self, float x) {
     self->position.x = x;
 }
@@ -53,6 +70,18 @@ void aabb3_set_position_z(aabb3_t *self, float z) {
     self->position.z = z;
 }
 
+void dyn_aabb3_set_velocity_x(dyn_aabb3_t *self, float x) {
+    self->velocity.x = x;
+}
+
+void dyn_aabb3_set_velocity_y(dyn_aabb3_t *self, float y) {
+    self->velocity.y = y;
+}
+
+void dyn_aabb3_set_velocity_z(dyn_aabb3_t *self, float z) {
+    self->velocity.z = z;
+}
+
 int aabb3_contains(const aabb3_t *a, const vec3_t *b) {
     float epsilon = 1E-6;
     return abs(a->position.x - b->x) < a->size.x + epsilon
@@ -60,7 +89,7 @@ int aabb3_contains(const aabb3_t *a, const vec3_t *b) {
         && abs(a->position.z - b->z) < a->size.z + epsilon;
 }
 
-int aabb3_resolve_collision(const aabb3_t *block, aabb3_t *player) {
+int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     float x = 0.0;
     float y = 0.0;
     float z = 0.0;
@@ -71,12 +100,12 @@ int aabb3_resolve_collision(const aabb3_t *block, aabb3_t *player) {
     float this_a = block->size.x;
     float this_b = block->size.y;
     float this_c = block->size.z;
-    float player_x = player->position.x;
-    float player_y = player->position.y;
-    float player_z = player->position.z;
-    float player_a = player->size.x;
-    float player_b = player->size.y;
-    float player_c = player->size.z;
+    float player_x = player->base.position.x;
+    float player_y = player->base.position.y;
+    float player_z = player->base.position.z;
+    float player_a = player->base.size.x;
+    float player_b = player->base.size.y;
+    float player_c = player->base.size.z;
 
     if (this_x > player_x && this_x - player_x < this_a + player_a) {
         x = (this_x - player_x) - (this_a + player_a);
@@ -97,14 +126,14 @@ int aabb3_resolve_collision(const aabb3_t *block, aabb3_t *player) {
     }
 
     if (abs(x) < abs(y) && abs(x) < abs(z)) {
-        player->position.x += x;
+        player->base.position.x += x;
     }
     if (abs(y) < abs(x) && abs(y) < abs(z)) {
-        player->position.y += y;
+        player->base.position.y += y;
         if (y > 0) return 1;
     }
     if (abs(z) < abs(y) && abs(z) < abs(x)) {
-        player->position.z += z;
+        player->base.position.z += z;
     }
     return 0;
 }

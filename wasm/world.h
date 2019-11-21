@@ -33,7 +33,7 @@ aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
  */
 struct world_t {
     int chunk_count;
-    aabb3_t player;
+    dyn_aabb3_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
 
@@ -43,8 +43,9 @@ struct world_t {
  */
 struct world_t* world_init() {
     struct world_t *self = (struct world_t*) malloc(sizeof(struct world_t));
-    vec3_init(&self->player.position, 0, 220, 0.0);
-    vec3_init(&self->player.size, 0.5, 2.0, 0.5);
+    vec3_init(&self->player.base.position, 0, 220, 0.0);
+    vec3_init(&self->player.base.size, 0.5, 2.0, 0.5);
+    vec3_init(&self->player.velocity, 0, 0, 0);
     self->chunk_count = 0;
     return self;
 }
@@ -57,7 +58,7 @@ void world_destroy(struct world_t *self) {
     free(self);
 }
 
-aabb3_t *world_get_player(struct world_t *self) {
+dyn_aabb3_t *world_get_player(struct world_t *self) {
     return &self->player;
 }
 
@@ -120,17 +121,52 @@ aabb3_t *world_ray_intersect(float rx, float ry, float rz, float rdx, float rdy,
     return min_block;
 }
 
-int world_update(struct world_t *self) {
+int world_update(struct world_t *self, float theta, float dt, int f, int b, int l, int r, int u) {
     int bottom = 0;
     for (int i = 0; i < self->chunk_count; i++) {
         struct chunk_t *c = self->chunks[i];
         aabb3_t* blocks = chunk_get_physics_objects(c);
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
-            if (aabb3_intersects(block, &self->player)) {
+            if (aabb3_intersects(block, (aabb3_t *) &self->player)) {
                 bottom = bottom || aabb3_resolve_collision(block, &self->player);
             }
         }
+    }
+
+    vec3_t velocity;
+    vec3_t velocity_left;
+    vec3_init(&velocity, 0, 0, 8);
+    vec3_rotate_y(&velocity, theta, &velocity);
+    vec3_rotate_y(&velocity, 1.57, &velocity_left);
+    if (f) {
+        self->player.base.position.x -= dt * velocity.x;
+        self->player.base.position.z -= dt * velocity.z;
+    }
+    
+    if (b) {
+        self->player.base.position.x += dt * velocity.x;
+        self->player.base.position.z += dt * velocity.z;
+    }
+    
+    if (l) {
+        self->player.base.position.x -= dt * velocity_left.x;
+        self->player.base.position.z -= dt * velocity_left.z;
+    }
+    
+    if (r) {
+        self->player.base.position.x += dt * velocity_left.x;
+        self->player.base.position.z += dt * velocity_left.z;
+    }
+    if (u && bottom) {
+        self->player.velocity.y = 12;
+    }
+
+    if (!bottom) {
+      self->player.base.position.y += dt * self->player.velocity.y;
+      self->player.velocity.y -= dt * 20;
+    } else if (self->player.velocity.y < 0) {
+      self->player.velocity.y = 0.0;
     }
     return bottom;
 }

@@ -6,33 +6,8 @@ class Chunk {
         this.chunkHeight = 256;
         this.chunkBuffer = instance.exports.chunk_init(world.worldBuffer, chunkX, chunkY, 0);
         this.chunkSize = chunkSize;
-        this.physicsObjects = [];
         this.visible = null;
         this.gl = gl;
-
-        /*
-        // Now create an array of positions for the cube.
-        for (let x = 0; x < chunkSize; x++) {
-            for (let z = 0; z < chunkSize; z++) {
-                let height = 75 + Math.round(5 * noise.simplex2((x + this.index[0] * this.chunkSize)/40, (z + this.index[1] * this.chunkSize)/40));
-                for (let y = 0; y < height; y++) {
-                    if (y < height - 1) {
-                        let q = Math.random();
-                        if (0.4 < q && q < 0.5) {
-                            this.setBlock(x, y, z, 4);
-                        } else if (0.6 < q && q < 0.5) {
-                            this.setBlock(x, y, z, 3);
-                        } else if (0.7 < q && q < 0.8) {
-                            this.setBlock(x, y, z, 5);
-                        } else {
-                            this.setBlock(x, y, z, 2);
-                        }
-                    } else {
-                        this.setBlock(x, y, z, 1);
-                    }
-                }
-            }
-        }*/
     }
 
     getBuffers() {
@@ -43,10 +18,6 @@ class Chunk {
         let gl = this.gl;
         this.physicsObjects = [];
         this.visible = this.visibleBlocks();
-        this.visible.forEach(block => {
-            let location = [(block[0] + this.index[0] * this.chunkSize) * 2, block[1] * 2, (block[2] + this.index[1] * this.chunkSize) * 2]   
-            this.physicsObjects.push(new PhysicsObject(...location, 1, 1, 1));
-        });
 
         instance.exports.chunk_update_buffers(this.chunkBuffer);
 
@@ -105,27 +76,6 @@ class Chunk {
 
         
         this.visible.forEach((block) => {
-            /*
-            if (selectedBlock)  {
-                let swc = selectedBlock.worldCoordinates();
-                let chunkX = Math.floor(swc[0] / buffers.chunkSize);
-                let chunkZ = Math.floor(-swc[2] / buffers.chunkSize);
-                let lx = swc[0] - chunkX * buffers.chunkSize;
-                let lz = -swc[2] - chunkZ * buffers.chunkSize;
-                let ly = swc[1]
-
-                if (this.index[0] == chunkX && this.index[1] == chunkZ && block[0] == lx && block[1] == ly && block[2] == lz) {
-                    single_textureCoordinates.forEach((coord, i) => {   
-                        if (i % 2 == 0) {
-                            textureCoordinates.push(coord + 0.1875)
-                        } else {
-                            textureCoordinates.push(coord  + 0.1875 )
-                        }
-                    });
-                    return;
-                }
-            }
-            */
            let q1 = Math.floor(Math.random() * 16);
            let q2 = Math.floor(Math.random() * 16);
 
@@ -304,6 +254,7 @@ class World {
         this.gl = gl;
         this.seed = seed;
         this.worldBuffer = instance.exports.world_init();
+        this.player = instance.exports.world_get_player(this.worldBuffer);
         this.texture = loadTexture(gl, './textures/blocks.png');
         this.viewRadius = 2;
         this.chunkSize = 16;
@@ -371,102 +322,18 @@ class World {
     }
 
 
-    computeRayIntersection(player, collisionRay) {
-        let collisions = []
-        this.chunks.forEach(chunk => {
-            chunk.physicsObjects.forEach((physicsObject) => {
-                if (distance(player.worldCoordinates(), physicsObject.worldCoordinates()) < 10) {
-                    let x = physicsObject.x - player.x
-                    let y = physicsObject.y - player.y
-                    let z = physicsObject.z - player.z
-                    let valid_times = []
-
-                    let left = x - physicsObject.a;
-                    let right = x + physicsObject.a;
-                    let top = y + physicsObject.b;
-                    let bottom = y - physicsObject.b;
-                    let front = z + physicsObject.c;
-                    let back = z - physicsObject.c;
-
-                    let left_t = left / collisionRay.x;
-                    let right_t = right / collisionRay.x;
-                    let top_t = top / collisionRay.y;
-                    let bottom_t = bottom / collisionRay.y;
-                    let front_t = front / collisionRay.z;
-                    let back_t = back / collisionRay.z;
-
-                    let left_p = multiply(collisionRay, left_t);
-                    let left_i = left_t > -0.5
-                                && left_p.y > bottom 
-                                && left_p.y < top
-                                && left_p.z > back
-                                && left_p.z < front;
-                    if (left_i) valid_times.push(left_t);
-                    
-                    let right_p = multiply(collisionRay, right_t);
-                    let right_i = right_t > -0.5
-                                && right_p.y > bottom 
-                                && right_p.y < top
-                                && right_p.z > back
-                                && right_p.z < front;
-                    if (right_i) valid_times.push(right_t);
-
-                    let top_p = multiply(collisionRay, top_t);
-                    let top_i = top_t > -0.5
-                                && top_p.x > left 
-                                && top_p.x < right
-                                && top_p.z > back
-                                && top_p.z < front;
-                    if (top_i) valid_times.push(top_t);
-
-                    let bottom_p = multiply(collisionRay, bottom_t);
-                    let bottom_i = bottom_t > -0.5
-                                && bottom_p.x > left 
-                                && bottom_p.x < right
-                                && bottom_p.z > back
-                                && bottom_p.z < front;
-                    if (bottom_i) valid_times.push(bottom_t);
-
-
-                    let front_p = multiply(collisionRay, front_t);
-                    let front_i = front_t > -0.5
-                                && front_p.x > left 
-                                && front_p.x < right
-                                && front_p.y > bottom
-                                && front_p.y < top;
-                    if (front_i) valid_times.push(front_t);
-
-                    let back_p = multiply(collisionRay, back_t);
-                    let back_i = back_t > -0.5
-                                && back_p.x > left 
-                                && back_p.x < right
-                                && back_p.y > bottom
-                                && back_p.y < top;
-                    if (back_i) valid_times.push(back_t);
-
-                    
-                    let min_time = Math.min(...valid_times);
-                    let side = null;
-                    switch(min_time) {
-                        case top_t: side = 'top'; break;
-                        case bottom_t: side = 'bottom'; break;
-                        case front_t: side = 'front'; break;
-                        case back_t: side = 'back'; break;
-                        case left_t: side = 'left'; break;
-                        case right_t: side = 'right'; break;
-                    }
-
-                    if (valid_times.length > 0) {
-                        collisions.push({
-                            physicsObject,
-                            t: min_time,
-                            side: side
-                        })
-                    }   
-                }         
-            });
-        })
-        return collisions;
+    computeRayIntersection(playerBuffer, collisionRay) {
+        let player = {
+            x: instance.exports.aabb3_position_x(playerBuffer),
+            y: instance.exports.aabb3_position_y(playerBuffer),
+            z: instance.exports.aabb3_position_z(playerBuffer)
+          };
+          
+        return instance.exports.world_ray_intersect(
+            player.x, player.y, player.z,
+            collisionRay.x, collisionRay.y, collisionRay.z,
+            this.worldBuffer,
+        );
     }
     
     populateChunks() {

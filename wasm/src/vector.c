@@ -41,6 +41,15 @@ void vec3_scale(const vec3_t *a, float b, vec3_t *c) {
     c->z = b * a->z;
 }
 
+void vec3_rotate_y(const vec3_t *a, float theta, vec3_t *c) {
+    vec3_t temp = *a;
+    float ctheta = cos(theta);
+    float stheta = sin(theta);
+    c->x = ctheta * temp.x + stheta * temp.z;
+    c->y = temp.y;
+    c->z = -stheta * temp.x + ctheta * temp.z;
+}
+
 float vec3_distance(const vec3_t *a, const vec3_t *b) {
     float u = a->x - b->x;
     float v = a->y - b->y;
