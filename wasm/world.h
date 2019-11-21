@@ -8,13 +8,15 @@
  * Represents a 16x256x16 
  * 
  */
+enum block_t { AIR = 0x0, GRASS, STONE, GOLD };
+
 struct chunk_t {
     struct world_t *world;
     uint8_t blocks[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
     int32_t chunk_x;
     int32_t chunk_z;
     float *vertex_buffer;
-    float *index_buffer;
+    unsigned short *index_buffer;
     float *normal_buffer;
     float *texture_buffer;
     aabb3_t *physics_objects;
@@ -23,8 +25,11 @@ struct chunk_t {
 };
 
 aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
-
+void chunk_update_buffers(struct chunk_t *self);
+uint8_t chunk_set(struct chunk_t *self, int x, int y, int z, enum block_t b);
+struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
 #define CHUNK_CAPACITY 1024
+#define VISIBLE_CHUNK_RADIUS 2
 
 /*
  * Represents an infinite voxel world composed of chunks.
@@ -33,6 +38,9 @@ aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
  */
 struct world_t {
     int chunk_count;
+    aabb3_t *selection;
+    float theta;
+    float phi;
     dyn_aabb3_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
@@ -47,6 +55,9 @@ struct world_t* world_init() {
     vec3_init(&self->player.base.size, 0.5, 2.0, 0.5);
     vec3_init(&self->player.velocity, 0, 0, 0);
     self->chunk_count = 0;
+    self->selection = NULL;
+    self->theta = 0;
+    self->phi = 0;
     return self;
 }
 
@@ -80,6 +91,30 @@ struct chunk_t* world_get_chunk(struct world_t *self, int x, int z) {
     return NULL;
 }
 
+int world_break_block(struct world_t *self, int x, int y, int z) {
+    int chunkX = floor((float) x / CHUNK_SIZE);
+    int chunkZ = floor((float) z / CHUNK_SIZE);
+    struct chunk_t *chunk = world_get_chunk(self, chunkX, chunkZ);
+    chunk_set(chunk, x - chunkX * CHUNK_SIZE, y, z - chunkZ * CHUNK_SIZE, AIR);
+
+}
+
+int world_get_chunk_count(struct world_t *self) {
+    return self->chunk_count;
+}
+
+void world_set_theta(struct world_t *self, float theta) {
+    self->theta = theta;
+}
+
+void world_set_phi(struct world_t *self, float phi) {
+    self->phi = phi;
+}
+
+struct chunk_t* world_get_chunk_by_index(struct world_t *self, int i) {
+    return self->chunks[i];
+}
+
 /*
  * Inserts a chunk at the given coordinates.
  * If the maximum chunk capacity has been exceeded, the function returns the
@@ -95,15 +130,7 @@ int world_set_chunk(struct world_t *self, int x, int z, struct chunk_t *chunk) {
     }
 }
 
-aabb3_t *world_ray_intersect(float rx, float ry, float rz, float rdx, float rdy, float rdz, struct world_t *self) {
-    ray3_t ray;
-    ray.position.x = rx;
-    ray.position.y = ry;
-    ray.position.z = rz;
-    ray.direction.x = rdx;
-    ray.direction.y = rdy;
-    ray.direction.z = rdz;
-
+aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self) {
     aabb3_t *min_block = NULL;
     float min_time = 1E6;
     for (int i = 0; i < self->chunk_count; i++) {
@@ -111,17 +138,26 @@ aabb3_t *world_ray_intersect(float rx, float ry, float rz, float rdx, float rdy,
         aabb3_t* blocks = chunk_get_physics_objects(c);
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
-            float time = ray_intersects(&ray, block);
+            float time = ray_intersects(ray, block);
             if (time < min_time) {
                 min_time = time;
                 min_block = block;
             }
         }
     }
+    
+    if (min_time < 1E6) {
+        self->selection = min_block;
+    }
     return min_block;
 }
 
 int world_update(struct world_t *self, float theta, float dt, int f, int b, int l, int r, int u) {
+    ray3_t ray;
+    ray.position = self->player.base.position;
+    vec3_init(&ray.direction, sin(3.14159 - self->theta) * cos(self->phi), -sin(self->phi), cos(3.14159 - self->theta) * cos(self->phi));   
+    world_ray_intersect(&ray, self);
+    
     int bottom = 0;
     for (int i = 0; i < self->chunk_count; i++) {
         struct chunk_t *c = self->chunks[i];
@@ -168,5 +204,29 @@ int world_update(struct world_t *self, float theta, float dt, int f, int b, int 
     } else if (self->player.velocity.y < 0) {
       self->player.velocity.y = 0.0;
     }
+
+    int center_x = self->player.base.position.x / 2 / CHUNK_SIZE;
+    int center_z = self->player.base.position.z / 2 / CHUNK_SIZE;
+
+    for (int chunk_x = -VISIBLE_CHUNK_RADIUS; chunk_x < VISIBLE_CHUNK_RADIUS; chunk_x++) {
+        for (int chunk_z = -VISIBLE_CHUNK_RADIUS; chunk_z < VISIBLE_CHUNK_RADIUS; chunk_z++) {
+            struct chunk_t *chunk = world_get_chunk(self, chunk_x + center_x, chunk_z + center_z);
+            if (chunk == NULL) {
+                chunk = chunk_init(self, chunk_x + center_x, chunk_z + center_z, 0);
+                chunk_update_buffers(chunk);
+                self->chunks[self->chunk_count] = chunk;
+                self->chunk_count++;
+            }
+        }
+    }
     return bottom;
+}
+
+void world_click_handler(struct world_t *self) {
+    if (self->selection != NULL) {
+        int x = self->selection->position.x / 2;
+        int y = self->selection->position.y / 2;
+        int z = self->selection->position.z / 2;
+        world_break_block(self, x, y, z);
+    }
 }

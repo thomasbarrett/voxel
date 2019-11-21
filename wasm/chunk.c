@@ -5,7 +5,6 @@
 #define TRUE 1
 #define FALSE 0
 
-enum block_t { AIR = 0x0, GRASS, STONE, GOLD };
 
 /*
  * Initializes a chunk with a simple flat world. This function quite simply fills
@@ -49,6 +48,11 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
 uint8_t chunk_get(struct chunk_t *self, int x, int y, int z) {
     return self->blocks[x][y][z];
 }
+
+int chunk_get_block_update(struct chunk_t *self) {
+    return self->update;
+}
+
 
 /*
  * Sets the block at position (x, y, z) in the chunk to b. 
@@ -188,15 +192,33 @@ float* chunk_get_vertex_buffer(struct chunk_t *self) {
     return self->vertex_buffer;
 }
 
-float* chunk_compute_index_buffer(struct chunk_t *self) {
-    if (self->update) {
+unsigned short* chunk_compute_index_buffer(struct chunk_t *self, size_t visible_block_count) {
+    /* allocate an array of exactly the right size */
+    unsigned short *indices = (unsigned short *) realloc(self->normal_buffer, sizeof(unsigned short) * 36 * visible_block_count);
+    size_t indices_length = 0;
+    int block_i = 0;
+    /* iterate through all blocks in chunk */
+    for (int x = 0; x < CHUNK_SIZE; x++) {
+        for (int y = 0; y < CHUNK_HEIGHT; y++) {
+            for (int z = 0; z < CHUNK_SIZE; z++) {
 
-    } else {
-        return self->index_buffer;
+                /* check whether or not the block is visible */
+                if (chunk_is_block_visible(self, x, y, z)) {
+                    
+                    /* add another copy of normals to array */
+                    for (int v = 0; v < 36; v++) {
+                        indices[indices_length] = single_indices[v] + block_i * 24;;
+                        indices_length++;
+                    }
+                    block_i += 1;
+                }
+            }
+        }
     }
+    return indices;
 }
 
-float* chunk_get_index_buffer(struct chunk_t *self) {
+unsigned short* chunk_get_index_buffer(struct chunk_t *self) {
     return self->index_buffer;
 }
 
@@ -237,12 +259,27 @@ float* chunk_get_normal_buffer(struct chunk_t *self) {
     return self->normal_buffer;
 }
 
-float* chunk_compute_texture_buffer(struct chunk_t *self) {
-    if (self->update) {
-
-    } else {
-        return self->texture_buffer;
+float* chunk_compute_texture_buffer(struct chunk_t *self, size_t visible_block_count) {
+    float *texture_coords = (float *) realloc(self->vertex_buffer, 2 * sizeof(float) * 24 * visible_block_count);
+    size_t i = 0;
+    for (int x = 0; x < CHUNK_SIZE; x++) {
+        for (int y = 0; y < CHUNK_HEIGHT; y++) {
+            for (int z = 0; z < CHUNK_SIZE; z++) {
+                uint8_t visible = chunk_is_block_visible(self, x, y, z);
+                if (visible) {
+                    float block_x = x + self->chunk_x * CHUNK_SIZE;
+                    float block_y = y;
+                    float block_z = z + self->chunk_z * CHUNK_SIZE;
+                    for (int v = 0; v < 24; v++) {
+                        texture_coords[i + 2 * v + 0] = single_texture_coords[v][0];
+                        texture_coords[i + 2 * v + 1] = single_texture_coords[v][1];
+                    }
+                    i += 2 * 24;
+                }
+            }
+        }
     }
+    return texture_coords;
 }
 
 /*
@@ -292,6 +329,8 @@ void chunk_update_buffers(struct chunk_t *self) {
         self->visible_block_count = visible_block_count;
         self->vertex_buffer = chunk_compute_vertex_buffer(self, visible_block_count);
         self->normal_buffer = chunk_compute_normal_buffer(self, visible_block_count);
+        self->index_buffer = chunk_compute_index_buffer(self, visible_block_count);
+        self->texture_buffer = chunk_compute_texture_buffer(self, visible_block_count);
         self->physics_objects = chunk_compute_physics_objects(self, visible_block_count);
     }
     self->update = FALSE;

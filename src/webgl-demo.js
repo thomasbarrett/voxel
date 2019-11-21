@@ -3,11 +3,7 @@ import { FPSTracker } from './fps.js'
 
 let cameraTheta = 0.0
 let cameraPhi = 0.0
-let velocity = 8.0;
 let world = null;
-let selectedBlock = null;
-let selection = null;
-let currentChunk = 0;
 
 const canvas = document.getElementById('glcanvas');
 const frameCounter = new FPSTracker('fps');
@@ -58,62 +54,26 @@ function create_projection_matrix(player, cameraPhi, cameraTheta, aspect, mode) 
         abs: Math.abs,
         sin: Math.sin,
         cos: Math.cos,
+        floor: Math.floor,
         print_float: function(num) {
           console.log(num);
         }
       }
     }
   );
+
   window.instance = instance;
   
   canvas.addEventListener('click', function(event) {
     canvas.requestPointerLock();
-    if (selection != 0 && keyboard.active('placeBlock')) {
-        let coords = [
-            instance.exports.aabb3_position_x(selection) / 2,
-            instance.exports.aabb3_position_y(selection) / 2,
-            instance.exports.aabb3_position_z(selection) / 2
-        ];
-        let chunkX = Math.floor(coords[0] / world.chunkSize);
-        let chunkZ = Math.floor(coords[2] / world.chunkSize);
-    
-        let chunk = world.chunks.filter(chunk => {
-          return chunk.index[0] == chunkX && chunk.index[1] == chunkZ;
-        });
-            
-        if (chunk.length > 0) {
-            switch (selection.side) {
-            case 'top': chunk[0].setBlockWorld(coords[0], coords[1] + 1, -coords[2], Math.floor(Math.random() * 16)); break;
-            case 'bottom': chunk[0].setBlockWorld(coords[0], coords[1] - 1, -coords[2], Math.floor(Math.random() * 16)); break;
-            case 'front': chunk[0].setBlockWorld(coords[0], coords[1], -coords[2] - 1, Math.floor(Math.random() * 16)); break;
-            case 'back': chunk[0].setBlockWorld(coords[0], coords[1], -coords[2] + 1, Math.floor(Math.random() * 16)); break;
-            case 'left': chunk[0].setBlockWorld(coords[0] - 1, coords[1], -coords[2], Math.floor(Math.random() * 16)); break;
-            case 'right': chunk[0].setBlockWorld(coords[0] + 1, coords[1], -coords[2], Math.floor(Math.random() * 16)); break;
-            }
-        }
-    } else if (selection != 0) {
-         let coords = [
-            instance.exports.aabb3_position_x(selection) / 2,
-            instance.exports.aabb3_position_y(selection) / 2,
-            instance.exports.aabb3_position_z(selection) / 2
-        ];
-        let chunkX = Math.floor(coords[0] / world.chunkSize);
-        let chunkZ = Math.floor(coords[2] / world.chunkSize);
-    
-        let chunk = world.chunks.filter(chunk => {
-          return chunk.index[0] == chunkX && chunk.index[1] == chunkZ;
-        });
-            
-        if (chunk.length > 0) {
-            chunk[0].setBlockWorld(coords[0], coords[1], coords[2], 0);
-        }
-    }
-   
+    instance.exports.world_click_handler(world.worldBuffer);
   });
 
   let updatePosition = function(e) {
     cameraTheta += e.movementX / canvas.clientWidth * Math.PI;
     cameraPhi += e.movementY / canvas.clientHeight * Math.PI;
+    instance.exports.world_set_theta(world.worldBuffer, cameraTheta);
+    instance.exports.world_set_phi(world.worldBuffer, cameraPhi);
   }
 
   let lockChangeAlert = function () {
@@ -153,21 +113,7 @@ function create_projection_matrix(player, cameraPhi, cameraTheta, aspect, mode) 
 
 function drawScene(gl, programInfo, world, deltaTime) {
 
-    /*
-     *  1. Selection
-     *  Compute the intersection of a ray emitted from the cursor with every
-     *  nearby element in the world. Then, find the nearest object and set the global 
-     *  'selected' and 'selectedBlock' objects to the object with which the ray collided.
-     *  This allows the player to select blocks!
-     */
-    function CollisionRay(theta, phi) {
-      this.x = Math.sin(Math.PI-theta) * Math.cos(phi)
-      this.y = -Math.sin(phi)
-      this.z = Math.cos(Math.PI-theta) * Math.cos(phi)
-    }
-    selection = world.computeRayIntersection(world.player, new CollisionRay(cameraTheta, cameraPhi));
-
-    let bottom = instance.exports.world_update(
+    instance.exports.world_update(
       world.worldBuffer, -cameraTheta, deltaTime,
       keyboard.active('forwards'),
       keyboard.active('backwards'),
@@ -175,21 +121,6 @@ function drawScene(gl, programInfo, world, deltaTime) {
       keyboard.active('right'),
       keyboard.active('up')
     );
-  
-    let coords = [
-      instance.exports.aabb3_position_x(world.player) / 2,
-      instance.exports.aabb3_position_y(world.player) / 2,
-      instance.exports.aabb3_position_z(world.player) / 2
-    ];
-
-    let chunkX = Math.floor(coords[0] / world.chunkSize);
-    let chunkZ = Math.floor(coords[2] / world.chunkSize);
-    currentChunk = [chunkX, chunkZ]
-
-    if (currentChunk[0] != world.centerChunk[0] || currentChunk[1] != world.centerChunk[1]) {
-        world.centerChunk = currentChunk;
-        world.populateChunks();
-    }
 
     let projectionMatrix = create_projection_matrix(world.player, cameraPhi, cameraTheta, gl.canvas.clientWidth / gl.canvas.clientHeight, 'normal') 
     world.render(programInfo, projectionMatrix);
