@@ -252,6 +252,33 @@ float* chunk_get_texture_buffer(struct chunk_t *self) {
     return self->texture_buffer;
 }
 
+
+
+aabb3_t* chunk_compute_physics_objects(struct chunk_t *self, size_t visible_vertex_count) {
+    aabb3_t *objects = (aabb3_t *) realloc(self->physics_objects, sizeof(aabb3_t) * visible_vertex_count);
+    size_t i = 0;
+    for (int x = 0; x < CHUNK_SIZE; x++) {
+        for (int y = 0; y < CHUNK_HEIGHT; y++) {
+            for (int z = 0; z < CHUNK_SIZE; z++) {
+                uint8_t visible = chunk_is_block_visible(self, x, y, z);
+                if (visible) {
+                    float block_x = x + self->chunk_x * CHUNK_SIZE;
+                    float block_y = y;
+                    float block_z = z + self->chunk_z * CHUNK_SIZE;
+                    vec3_init(&objects[i].position, block_x * 2, block_y * 2, block_z * 2);
+                    vec3_init(&objects[i].size, 1, 1, 1);
+                    i += 1;
+                }
+            }
+        }
+    }
+    return objects;
+}
+
+aabb3_t* chunk_get_physics_objects(struct chunk_t *self) {
+    return self->physics_objects;
+}
+
 /*
  * Update the buffer fields in the given chunk.
  * This will be called at every frame, so the buffers should only actually be
@@ -261,9 +288,11 @@ float* chunk_get_texture_buffer(struct chunk_t *self) {
  */
 void chunk_update_buffers(struct chunk_t *self) {
     if (self->update) {
-        size_t visible_vertex_count = chunk_visible_block_count(self);
-        self->vertex_buffer = chunk_compute_vertex_buffer(self, visible_vertex_count);
-        self->normal_buffer = chunk_compute_normal_buffer(self, visible_vertex_count);
+        size_t visible_block_count = chunk_visible_block_count(self);
+        self->visible_block_count = visible_block_count;
+        self->vertex_buffer = chunk_compute_vertex_buffer(self, visible_block_count);
+        self->normal_buffer = chunk_compute_normal_buffer(self, visible_block_count);
+        self->physics_objects = chunk_compute_physics_objects(self, visible_block_count);
     }
     self->update = FALSE;
 }

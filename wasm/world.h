@@ -1,4 +1,5 @@
 #include "stdint.h"
+#include "include/physics_object.h"
 
 #define CHUNK_SIZE 16
 #define CHUNK_HEIGHT 256
@@ -16,8 +17,12 @@ struct chunk_t {
     float *index_buffer;
     float *normal_buffer;
     float *texture_buffer;
+    aabb3_t *physics_objects;
     uint8_t update;
+    size_t visible_block_count;
 };
+
+aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
 
 #define CHUNK_CAPACITY 1024
 
@@ -28,6 +33,7 @@ struct chunk_t {
  */
 struct world_t {
     int chunk_count;
+    aabb3_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
 
@@ -37,6 +43,8 @@ struct world_t {
  */
 struct world_t* world_init() {
     struct world_t *self = (struct world_t*) malloc(sizeof(struct world_t));
+    vec3_init(&self->player.position, 0, 220, 0.0);
+    vec3_init(&self->player.size, 0.5, 2.0, 0.5);
     self->chunk_count = 0;
     return self;
 }
@@ -47,6 +55,10 @@ struct world_t* world_init() {
  */
 void world_destroy(struct world_t *self) {
     free(self);
+}
+
+aabb3_t *world_get_player(struct world_t *self) {
+    return &self->player;
 }
 
 /*
@@ -80,4 +92,45 @@ int world_set_chunk(struct world_t *self, int x, int z, struct chunk_t *chunk) {
     } else {
         return -1;
     }
+}
+
+aabb3_t *world_ray_intersect(float rx, float ry, float rz, float rdx, float rdy, float rdz, struct world_t *self) {
+    ray3_t ray;
+    ray.position.x = rx;
+    ray.position.y = ry;
+    ray.position.z = rz;
+    ray.direction.x = rdx;
+    ray.direction.y = rdy;
+    ray.direction.z = rdz;
+
+    aabb3_t *min_block = NULL;
+    float min_time = 1E6;
+    for (int i = 0; i < self->chunk_count; i++) {
+        struct chunk_t *c = self->chunks[i];
+        aabb3_t* blocks = chunk_get_physics_objects(c);
+        for (int j = 0; j < c->visible_block_count; j++) {
+            aabb3_t *block = &blocks[j];
+            float time = ray_intersects(&ray, block);
+            if (time < min_time) {
+                min_time = time;
+                min_block = block;
+            }
+        }
+    }
+    return min_block;
+}
+
+int world_update(struct world_t *self) {
+    int bottom = 0;
+    for (int i = 0; i < self->chunk_count; i++) {
+        struct chunk_t *c = self->chunks[i];
+        aabb3_t* blocks = chunk_get_physics_objects(c);
+        for (int j = 0; j < c->visible_block_count; j++) {
+            aabb3_t *block = &blocks[j];
+            if (aabb3_intersects(block, &self->player)) {
+                bottom = bottom || aabb3_resolve_collision(block, &self->player);
+            }
+        }
+    }
+    return bottom;
 }
