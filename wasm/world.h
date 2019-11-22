@@ -41,6 +41,7 @@ struct world_t {
     aabb3_t *selection;
     float theta;
     float phi;
+    float projection_matrix[4][4];
     dyn_aabb3_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
@@ -111,6 +112,32 @@ void world_set_phi(struct world_t *self, float phi) {
     self->phi = phi;
 }
 
+float world_get_theta(struct world_t *self) {
+    return self->theta;
+}
+
+float world_get_phi(struct world_t *self) {
+    return self->phi;
+}
+
+float* world_get_projection_matrix(struct world_t *self, float aspect) {
+    float fov = 45 * 3.14159 / 180;   // in radians
+    float near = 0.1;
+    float far = 5000.0;
+    float rotation_x_matrix[4][4];
+    float rotation_y_matrix[4][4];
+    float translate_matrix[4][4];
+    mat4_projection(fov, near, far, aspect, (float *) &self->projection_matrix);
+    mat4_rotate_x(self->phi, (float *) &rotation_x_matrix);
+    mat4_rotate_y(self->theta, (float *) &rotation_y_matrix);
+    mat4_translate(-self->player.base.position.x, -self->player.base.position.y, -self->player.base.position.z, (float *) &translate_matrix);
+
+    mat4_multiply(rotation_x_matrix, self->projection_matrix, self->projection_matrix);
+    mat4_multiply(rotation_y_matrix, self->projection_matrix, self->projection_matrix);
+    mat4_multiply(translate_matrix, self->projection_matrix, self->projection_matrix);
+    return (float*) &self->projection_matrix;
+}
+
 struct chunk_t* world_get_chunk_by_index(struct world_t *self, int i) {
     return self->chunks[i];
 }
@@ -152,7 +179,7 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self) {
     return min_block;
 }
 
-int world_update(struct world_t *self, float theta, float dt, int f, int b, int l, int r, int u) {
+int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int u) {
     ray3_t ray;
     ray.position = self->player.base.position;
     vec3_init(&ray.direction, sin(3.14159 - self->theta) * cos(self->phi), -sin(self->phi), cos(3.14159 - self->theta) * cos(self->phi));   
@@ -173,7 +200,7 @@ int world_update(struct world_t *self, float theta, float dt, int f, int b, int 
     vec3_t velocity;
     vec3_t velocity_left;
     vec3_init(&velocity, 0, 0, 8);
-    vec3_rotate_y(&velocity, theta, &velocity);
+    vec3_rotate_y(&velocity, -self->theta, &velocity);
     vec3_rotate_y(&velocity, 1.57, &velocity_left);
     if (f) {
         self->player.base.position.x -= dt * velocity.x;
@@ -229,4 +256,9 @@ void world_click_handler(struct world_t *self) {
         int z = self->selection->position.z / 2;
         world_break_block(self, x, y, z);
     }
+}
+
+void world_move_handler(struct world_t *self, float dx, float dy) {
+    self->theta += dx * 3.14159;
+    self->phi += dy * 3.14159;
 }
