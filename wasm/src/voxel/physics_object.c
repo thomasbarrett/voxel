@@ -1,26 +1,7 @@
-#ifndef PHYSICS_OBJECT_H
-#define PHYSICS_OBJECT_H
 
-#include <vector.h>
 #include <math.h>
-
-/*
- * Represents a solid block in space.
- */
-typedef struct aabb3 {
-    vec3_t position;
-    vec3_t size;
-} aabb3_t;
-
-typedef struct dyn_aabb3 {
-    aabb3_t base;
-    vec3_t velocity;
-} dyn_aabb3_t;
-
-typedef struct ray3 {
-    vec3_t position;
-    vec3_t direction;
-} ray3_t;
+#include <voxel/vector.h>
+#include <voxel/physics_object.h>
 
 /**
  * Return whether or not the two axis-aligned bounding boxes intersect.
@@ -32,54 +13,6 @@ int aabb3_intersects(const aabb3_t *a, const aabb3_t *b) {
     return abs(a->position.x - b->position.x)  < a->size.x + b->size.x
         && abs(a->position.y - b->position.y)  < a->size.y + b->size.y
         && abs(a->position.z - b->position.z)  < a->size.z + b->size.z;
-}
-
-float aabb3_position_x(const aabb3_t *self) {
-    return self->position.x;
-}
-
-float aabb3_position_y(const aabb3_t *self) {
-    return self->position.y;
-}
-
-float aabb3_position_z(const aabb3_t *self) {
-    return self->position.z;
-}
-
-float dyn_aabb3_velocity_x(const dyn_aabb3_t *self) {
-    return self->velocity.x;
-}
-
-float dyn_aabb3_velocity_y(const dyn_aabb3_t *self) {
-    return self->velocity.y;
-}
-
-float dyn_aabb3_velocity_z(const dyn_aabb3_t *self) {
-    return self->velocity.z;
-}
-
-void aabb3_set_position_x(aabb3_t *self, float x) {
-    self->position.x = x;
-}
-
-void aabb3_set_position_y(aabb3_t *self, float y) {
-    self->position.y = y;
-}
-
-void aabb3_set_position_z(aabb3_t *self, float z) {
-    self->position.z = z;
-}
-
-void dyn_aabb3_set_velocity_x(dyn_aabb3_t *self, float x) {
-    self->velocity.x = x;
-}
-
-void dyn_aabb3_set_velocity_y(dyn_aabb3_t *self, float y) {
-    self->velocity.y = y;
-}
-
-void dyn_aabb3_set_velocity_z(dyn_aabb3_t *self, float z) {
-    self->velocity.z = z;
 }
 
 int aabb3_contains(const aabb3_t *a, const vec3_t *b) {
@@ -195,23 +128,3 @@ float ray_intersects(const ray3_t *ray, const aabb3_t *obj) {
 
     return time_min;
 }
-
-float ray_intersects_wrapper(float rx, float ry, float rz, float rdx, float rdy, float rdz, float ox, float oy, float oz, float owx, float owy, float owz) {
-    ray3_t ray;
-    ray.position.x = rx;
-    ray.position.y = ry;
-    ray.position.z = rz;
-    ray.direction.x = rdx;
-    ray.direction.y = rdy;
-    ray.direction.z = rdz;
-    aabb3_t obj;
-    obj.position.x = ox;
-    obj.position.y = oy;
-    obj.position.z = oz;
-    obj.size.x = owx;
-    obj.size.y = owy;
-    obj.size.z = owz;
-    return ray_intersects(&ray, &obj);
-}
-
-#endif /* PHYSICS_OBJECT_H */

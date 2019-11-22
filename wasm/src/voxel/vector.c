@@ -2,7 +2,7 @@
  * This file contains
  * 
  */
-#include <vector.h>
+#include <voxel/vector.h>
 #include <math.h>
 
 void vec3_init(vec3_t *a, float x, float y, float z) {

@@ -1,6 +1,7 @@
-#include "stdlib.h"
-#include "world.h"
-#include "cube.h"
+#include <stdlib.h>
+
+#include <voxel/world.h>
+#include <voxel/cube.h>
 
 #define TRUE 1
 #define FALSE 0
