@@ -1,5 +1,9 @@
+#ifndef WORLD_H
+#define WORLD_H
+
 #include <stdint.h>
 #include <voxel/physics_object.h>
+#include <voxel/player.h>
 
 #define CHUNK_SIZE 16
 #define CHUNK_HEIGHT 256
@@ -38,24 +42,30 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
  */
 struct world_t {
     int chunk_count;
-    aabb3_t *selection;
-    float theta;
-    float phi;
     float projection_matrix[4][4];
-    dyn_aabb3_t player;
+    player_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
 
+/**
+ * Constructs a new voxel world. 
+ * The world is allocated on the heap. The world should be destroyed with
+ * world_destroy after use.
+ */
 struct world_t* world_init();
+
+/**
+ * Released resources allocated by the world.
+ * After this function is called, the world will no longer be valid. This
+ * should be called once the world is no longer in use.
+ */
 void world_destroy(struct world_t *self);
-dyn_aabb3_t *world_get_player(struct world_t *self);
+
+
+player_t *world_get_player(struct world_t *self);
 struct chunk_t* world_get_chunk(struct world_t *self, int x, int z);
-int world_break_block(struct world_t *self, int x, int y, int z);
+void world_break_block(struct world_t *self, int x, int y, int z);
 int world_get_chunk_count(struct world_t *self);
-void world_set_theta(struct world_t *self, float theta);
-void world_set_phi(struct world_t *self, float phi);
-float world_get_theta(struct world_t *self);
-float world_get_phi(struct world_t *self);
 float* world_get_projection_matrix(struct world_t *self, float aspect);
 struct chunk_t* world_get_chunk_by_index(struct world_t *self, int i);
 int world_set_chunk(struct world_t *self, int x, int z, struct chunk_t *chunk);
@@ -63,3 +73,5 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self);
 int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int u);
 void world_click_handler(struct world_t *self);
 void world_move_handler(struct world_t *self, float dx, float dy);
+
+#endif /* WORLD_H */

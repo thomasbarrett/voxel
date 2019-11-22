@@ -37,7 +37,7 @@ function lockChangeAlert() {
 
 async function load_game_source() {
     const { instance } = await WebAssembly.instantiateStreaming(
-        fetch("./wasm/chunk.wasm"), {
+        fetch("./wasm/voxel.wasm"), {
             env: {
                 sqrt: Math.sqrt,
                 abs: Math.abs,

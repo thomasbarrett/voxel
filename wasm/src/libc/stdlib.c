@@ -8,6 +8,7 @@ int memcpy(void *a, void *b, size_t n) {
         ptr1++;
         ptr2++;
     }
+    return 0;
 }
 
 int memset(void *a, char b, size_t n) {
@@ -16,4 +17,5 @@ int memset(void *a, char b, size_t n) {
         *(ptr1) = b;
         ptr1++;
     }
+    return 0;
 }

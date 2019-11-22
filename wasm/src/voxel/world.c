@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include <voxel/physics_object.h>
 #include <voxel/world.h>
 
@@ -13,13 +14,13 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
  */
 struct world_t* world_init() {
     struct world_t *self = (struct world_t*) malloc(sizeof(struct world_t));
-    vec3_init(&self->player.base.position, 0, 220, 0.0);
-    vec3_init(&self->player.base.size, 0.5, 2.0, 0.5);
-    vec3_init(&self->player.velocity, 0, 0, 0);
+    vec3_init(&self->player.physics_object.base.position, 0, 220, 0.0);
+    vec3_init(&self->player.physics_object.base.size, 0.5, 2.0, 0.5);
+    vec3_init(&self->player.physics_object.velocity, 0, 0, 0);
     self->chunk_count = 0;
-    self->selection = NULL;
-    self->theta = 0;
-    self->phi = 0;
+    self->player.selection = NULL;
+    self->player.theta = 0;
+    self->player.phi = 0;
     return self;
 }
 
@@ -31,7 +32,7 @@ void world_destroy(struct world_t *self) {
     free(self);
 }
 
-dyn_aabb3_t *world_get_player(struct world_t *self) {
+player_t *world_get_player(struct world_t *self) {
     return &self->player;
 }
 
@@ -53,32 +54,15 @@ struct chunk_t* world_get_chunk(struct world_t *self, int x, int z) {
     return NULL;
 }
 
-int world_break_block(struct world_t *self, int x, int y, int z) {
+void world_break_block(struct world_t *self, int x, int y, int z) {
     int chunkX = floor((float) x / CHUNK_SIZE);
     int chunkZ = floor((float) z / CHUNK_SIZE);
     struct chunk_t *chunk = world_get_chunk(self, chunkX, chunkZ);
     chunk_set(chunk, x - chunkX * CHUNK_SIZE, y, z - chunkZ * CHUNK_SIZE, AIR);
-
 }
 
 int world_get_chunk_count(struct world_t *self) {
     return self->chunk_count;
-}
-
-void world_set_theta(struct world_t *self, float theta) {
-    self->theta = theta;
-}
-
-void world_set_phi(struct world_t *self, float phi) {
-    self->phi = phi;
-}
-
-float world_get_theta(struct world_t *self) {
-    return self->theta;
-}
-
-float world_get_phi(struct world_t *self) {
-    return self->phi;
 }
 
 float* world_get_projection_matrix(struct world_t *self, float aspect) {
@@ -89,9 +73,9 @@ float* world_get_projection_matrix(struct world_t *self, float aspect) {
     float rotation_y_matrix[4][4];
     float translate_matrix[4][4];
     mat4_projection(fov, near, far, aspect, (float *) &self->projection_matrix);
-    mat4_rotate_x(self->phi, (float *) &rotation_x_matrix);
-    mat4_rotate_y(self->theta, (float *) &rotation_y_matrix);
-    mat4_translate(-self->player.base.position.x, -self->player.base.position.y, -self->player.base.position.z, (float *) &translate_matrix);
+    mat4_rotate_x(self->player.phi, (float *) &rotation_x_matrix);
+    mat4_rotate_y(self->player.theta, (float *) &rotation_y_matrix);
+    mat4_translate(-self->player.physics_object.base.position.x, -self->player.physics_object.base.position.y, -self->player.physics_object.base.position.z, (float *) &translate_matrix);
 
     mat4_multiply(rotation_x_matrix, self->projection_matrix, self->projection_matrix);
     mat4_multiply(rotation_y_matrix, self->projection_matrix, self->projection_matrix);
@@ -135,15 +119,15 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self) {
     }
     
     if (min_time < 1E6) {
-        self->selection = min_block;
+        self->player.selection = min_block;
     }
     return min_block;
 }
 
 int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int u) {
     ray3_t ray;
-    ray.position = self->player.base.position;
-    vec3_init(&ray.direction, sin(3.14159 - self->theta) * cos(self->phi), -sin(self->phi), cos(3.14159 - self->theta) * cos(self->phi));   
+    ray.position = self->player.physics_object.base.position;
+    vec3_init(&ray.direction, sin(3.14159 - self->player.theta) * cos(self->player.phi), -sin(self->player.phi), cos(3.14159 - self->player.theta) * cos(self->player.phi));   
     world_ray_intersect(&ray, self);
     
     int bottom = 0;
@@ -153,7 +137,7 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
             if (aabb3_intersects(block, (aabb3_t *) &self->player)) {
-                bottom = bottom || aabb3_resolve_collision(block, &self->player);
+                bottom = bottom || aabb3_resolve_collision(block, &self->player.physics_object);
             }
         }
     }
@@ -161,40 +145,40 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
     vec3_t velocity;
     vec3_t velocity_left;
     vec3_init(&velocity, 0, 0, 8);
-    vec3_rotate_y(&velocity, -self->theta, &velocity);
+    vec3_rotate_y(&velocity, -self->player.theta, &velocity);
     vec3_rotate_y(&velocity, 1.57, &velocity_left);
     if (f) {
-        self->player.base.position.x -= dt * velocity.x;
-        self->player.base.position.z -= dt * velocity.z;
+        self->player.physics_object.base.position.x -= dt * velocity.x;
+        self->player.physics_object.base.position.z -= dt * velocity.z;
     }
     
     if (b) {
-        self->player.base.position.x += dt * velocity.x;
-        self->player.base.position.z += dt * velocity.z;
+        self->player.physics_object.base.position.x += dt * velocity.x;
+        self->player.physics_object.base.position.z += dt * velocity.z;
     }
     
     if (l) {
-        self->player.base.position.x -= dt * velocity_left.x;
-        self->player.base.position.z -= dt * velocity_left.z;
+        self->player.physics_object.base.position.x -= dt * velocity_left.x;
+        self->player.physics_object.base.position.z -= dt * velocity_left.z;
     }
     
     if (r) {
-        self->player.base.position.x += dt * velocity_left.x;
-        self->player.base.position.z += dt * velocity_left.z;
+        self->player.physics_object.base.position.x += dt * velocity_left.x;
+        self->player.physics_object.base.position.z += dt * velocity_left.z;
     }
     if (u && bottom) {
-        self->player.velocity.y = 12;
+        self->player.physics_object.velocity.y = 12;
     }
 
     if (!bottom) {
-      self->player.base.position.y += dt * self->player.velocity.y;
-      self->player.velocity.y -= dt * 20;
-    } else if (self->player.velocity.y < 0) {
-      self->player.velocity.y = 0.0;
+      self->player.physics_object.base.position.y += dt * self->player.physics_object.velocity.y;
+      self->player.physics_object.velocity.y -= dt * 20;
+    } else if (self->player.physics_object.velocity.y < 0) {
+      self->player.physics_object.velocity.y = 0.0;
     }
 
-    int center_x = self->player.base.position.x / 2 / CHUNK_SIZE;
-    int center_z = self->player.base.position.z / 2 / CHUNK_SIZE;
+    int center_x = self->player.physics_object.base.position.x / 2 / CHUNK_SIZE;
+    int center_z = self->player.physics_object.base.position.z / 2 / CHUNK_SIZE;
 
     for (int chunk_x = -VISIBLE_CHUNK_RADIUS; chunk_x < VISIBLE_CHUNK_RADIUS; chunk_x++) {
         for (int chunk_z = -VISIBLE_CHUNK_RADIUS; chunk_z < VISIBLE_CHUNK_RADIUS; chunk_z++) {
@@ -211,15 +195,15 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
 }
 
 void world_click_handler(struct world_t *self) {
-    if (self->selection != NULL) {
-        int x = self->selection->position.x / 2;
-        int y = self->selection->position.y / 2;
-        int z = self->selection->position.z / 2;
+    if (self->player.selection != NULL) {
+        int x = self->player.selection->position.x / 2;
+        int y = self->player.selection->position.y / 2;
+        int z = self->player.selection->position.z / 2;
         world_break_block(self, x, y, z);
     }
 }
 
 void world_move_handler(struct world_t *self, float dx, float dy) {
-    self->theta += dx * 3.14159;
-    self->phi += dy * 3.14159;
+    self->player.theta += dx * 3.14159;
+    self->player.phi += dy * 3.14159;
 }
