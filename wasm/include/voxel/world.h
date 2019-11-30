@@ -12,7 +12,13 @@
  * Represents a 16x256x16 
  * 
  */
-enum block_t { AIR = 0x0, GRASS, STONE, GOLD };
+enum block_t { 
+    AIR = 0x0, 
+    STONE, GRASS, DIRT, COBBLE_STONE, WOODEN_PLANKS,
+    GOLD, IRON, COAL, WOOD, LEAVES
+};
+
+extern int block_texture_index[][6][2];
 
 struct chunk_t {
     struct world_t *world;
@@ -42,7 +48,7 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
  */
 struct world_t {
     int chunk_count;
-    float projection_matrix[4][4];
+    mat4_t projection_matrix;
     player_t player;
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };

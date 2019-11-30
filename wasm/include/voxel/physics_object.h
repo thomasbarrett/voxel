@@ -8,7 +8,7 @@
  * \date Nov 21, 2019
  */
 
-#include <voxel/vector.h>
+#include <voxel/linalg.h>
 #include <math.h>
 
 /**

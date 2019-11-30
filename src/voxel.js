@@ -47,12 +47,32 @@ async function load_game_source() {
                 floor: Math.floor,
                 print_float: function(num) {
                     console.log(num);
+                },
+                mem_doctor: function(lo, hi) {
+                    let memory_buffer = instance.exports.memory.buffer;
+                    let uint32_view = new Uint32Array(memory_buffer, lo, (hi - lo)/4);
+                    let index = 0;
+                    let blocks = [];
+                    let block_count = 0;
+                    while(index < (hi - lo)/4) {
+                        let header = uint32_view[index];
+                        let free = header >>> 31;
+                        let size = header & ((-1) >>> 1);
+                        blocks.push({free, size, header: header.toString(2)})
+                        index += size / 4;
+                        block_count++;
+                    }
+                    
+                    console.log(`${block_count} blocks found`);
+                    console.log(blocks);
                 }
             }
         }
     );
 
     window.instance = instance;
+    instance.exports.memory.grow(200);
+    instance.exports.mem_init();
 };
 
 function game_loop() {
@@ -69,6 +89,8 @@ function game_loop() {
         alert('Unable to initialize WebGL. Your browser or machine may not support it.');
         return;
     }
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
 
     let programInfo = getProgramInfo(gl);
     world = instance.exports.world_init();

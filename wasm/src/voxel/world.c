@@ -3,6 +3,20 @@
 #include <voxel/physics_object.h>
 #include <voxel/world.h>
 
+int block_texture_index[][6][2] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    2, 0, 2, 0, 1, 0, 3, 0, 2, 0, 2, 0,
+    3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0,
+    4, 0, 4, 0, 4, 0,  4, 0, 4, 0, 4, 0,
+    5, 0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0,
+    0, 1, 0, 1, 0, 1,  0, 1, 0, 1, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2, 1, 2, 1, 2, 1,  2, 1, 2, 1, 2, 1,
+    4, 1, 4, 1, 3, 1, 3, 1, 4, 1, 4, 1,
+    8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1
+};
+
 aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
 void chunk_update_buffers(struct chunk_t *self);
 uint8_t chunk_set(struct chunk_t *self, int x, int y, int z, enum block_t b);
@@ -14,8 +28,8 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
  */
 struct world_t* world_init() {
     struct world_t *self = (struct world_t*) malloc(sizeof(struct world_t));
-    vec3_init(&self->player.physics_object.base.position, 0, 220, 0.0);
-    vec3_init(&self->player.physics_object.base.size, 0.5, 2.0, 0.5);
+    vec3_init(&self->player.physics_object.position, 0, 220, 0.0);
+    vec3_init(&self->player.physics_object.size, 0.5, 2.0, 0.5);
     vec3_init(&self->player.physics_object.velocity, 0, 0, 0);
     self->chunk_count = 0;
     self->player.selection = NULL;
@@ -69,17 +83,17 @@ float* world_get_projection_matrix(struct world_t *self, float aspect) {
     float fov = 45 * 3.14159 / 180;   // in radians
     float near = 0.1;
     float far = 5000.0;
-    float rotation_x_matrix[4][4];
-    float rotation_y_matrix[4][4];
-    float translate_matrix[4][4];
-    mat4_projection(fov, near, far, aspect, (float *) &self->projection_matrix);
-    mat4_rotate_x(self->player.phi, (float *) &rotation_x_matrix);
-    mat4_rotate_y(self->player.theta, (float *) &rotation_y_matrix);
-    mat4_translate(-self->player.physics_object.base.position.x, -self->player.physics_object.base.position.y, -self->player.physics_object.base.position.z, (float *) &translate_matrix);
+    mat4_t rotation_x_matrix;
+    mat4_t rotation_y_matrix;
+    mat4_t translate_matrix;
+    mat4_projection(fov, near, far, aspect, &self->projection_matrix);
+    mat4_rotate_x(self->player.phi, &rotation_x_matrix);
+    mat4_rotate_y(self->player.theta, &rotation_y_matrix);
+    mat4_translate(-self->player.physics_object.position.x, -self->player.physics_object.position.y, -self->player.physics_object.position.z, &translate_matrix);
 
-    mat4_multiply(rotation_x_matrix, self->projection_matrix, self->projection_matrix);
-    mat4_multiply(rotation_y_matrix, self->projection_matrix, self->projection_matrix);
-    mat4_multiply(translate_matrix, self->projection_matrix, self->projection_matrix);
+    mat4_multiply(&rotation_x_matrix, &self->projection_matrix, &self->projection_matrix);
+    mat4_multiply(&rotation_y_matrix, &self->projection_matrix, &self->projection_matrix);
+    mat4_multiply(&translate_matrix, &self->projection_matrix, &self->projection_matrix);
     return (float*) &self->projection_matrix;
 }
 
@@ -126,10 +140,45 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self) {
 
 int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int u) {
     ray3_t ray;
-    ray.position = self->player.physics_object.base.position;
+    ray.position = self->player.physics_object.position;
     vec3_init(&ray.direction, sin(3.14159 - self->player.theta) * cos(self->player.phi), -sin(self->player.phi), cos(3.14159 - self->player.theta) * cos(self->player.phi));   
     world_ray_intersect(&ray, self);
     
+   
+
+    vec3_t velocity;
+    vec3_t velocity_left;
+    vec3_init(&velocity, 0, 0, 8);
+    mat4_t rotate_y;
+
+    mat4_rotate_y(-self->player.theta, &rotate_y); 
+    mat4_vec3_multiply(&rotate_y, &velocity, &velocity);
+    mat4_rotate_y(3.14159 / 2, &rotate_y); 
+    mat4_vec3_multiply(&rotate_y, &velocity, &velocity_left);
+
+
+    if (f) {
+        self->player.physics_object.position.x -= dt * velocity.x;
+        self->player.physics_object.position.z -= dt * velocity.z;
+    }
+    
+    if (b) {
+        self->player.physics_object.position.x += dt * velocity.x;
+        self->player.physics_object.position.z += dt * velocity.z;
+    }
+    
+    if (l) {
+        self->player.physics_object.position.x -= dt * velocity_left.x;
+        self->player.physics_object.position.z -= dt * velocity_left.z;
+    }
+    
+    if (r) {
+        self->player.physics_object.position.x += dt * velocity_left.x;
+        self->player.physics_object.position.z += dt * velocity_left.z;
+    }
+    
+    self->player.physics_object.position.y += dt * self->player.physics_object.velocity.y;
+
     int bottom = 0;
     for (int i = 0; i < self->chunk_count; i++) {
         struct chunk_t *c = self->chunks[i];
@@ -142,43 +191,18 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
         }
     }
 
-    vec3_t velocity;
-    vec3_t velocity_left;
-    vec3_init(&velocity, 0, 0, 8);
-    vec3_rotate_y(&velocity, -self->player.theta, &velocity);
-    vec3_rotate_y(&velocity, 1.57, &velocity_left);
-    if (f) {
-        self->player.physics_object.base.position.x -= dt * velocity.x;
-        self->player.physics_object.base.position.z -= dt * velocity.z;
-    }
-    
-    if (b) {
-        self->player.physics_object.base.position.x += dt * velocity.x;
-        self->player.physics_object.base.position.z += dt * velocity.z;
-    }
-    
-    if (l) {
-        self->player.physics_object.base.position.x -= dt * velocity_left.x;
-        self->player.physics_object.base.position.z -= dt * velocity_left.z;
-    }
-    
-    if (r) {
-        self->player.physics_object.base.position.x += dt * velocity_left.x;
-        self->player.physics_object.base.position.z += dt * velocity_left.z;
-    }
     if (u && bottom) {
         self->player.physics_object.velocity.y = 12;
     }
 
     if (!bottom) {
-      self->player.physics_object.base.position.y += dt * self->player.physics_object.velocity.y;
       self->player.physics_object.velocity.y -= dt * 20;
     } else if (self->player.physics_object.velocity.y < 0) {
       self->player.physics_object.velocity.y = 0.0;
     }
 
-    int center_x = self->player.physics_object.base.position.x / 2 / CHUNK_SIZE;
-    int center_z = self->player.physics_object.base.position.z / 2 / CHUNK_SIZE;
+    int center_x = self->player.physics_object.position.x / 2 / CHUNK_SIZE;
+    int center_z = self->player.physics_object.position.z / 2 / CHUNK_SIZE;
 
     for (int chunk_x = -VISIBLE_CHUNK_RADIUS; chunk_x < VISIBLE_CHUNK_RADIUS; chunk_x++) {
         for (int chunk_z = -VISIBLE_CHUNK_RADIUS; chunk_z < VISIBLE_CHUNK_RADIUS; chunk_z++) {

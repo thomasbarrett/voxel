@@ -1,40 +1,46 @@
+const cached_buffers = {}
 
 function chunk_get_buffers(chunkBuffer, gl) {
 
-    instance.exports.chunk_update_buffers(chunkBuffer);
-    
-    let visible_block_length = instance.exports.chunk_visible_block_count(chunkBuffer);
+    if (instance.exports.chunk_get_block_update(chunkBuffer) == 1 || !cached_buffers[chunkBuffer]) {
+        (async function update_buffers() {
 
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    let vertex_offset = instance.exports.chunk_get_vertex_buffer(chunkBuffer);
-    let vertex_length = visible_block_length * 24 * 3;
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, vertex_offset, vertex_length), gl.STATIC_DRAW);
-    
-    const normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    let normal_offset = instance.exports.chunk_get_normal_buffer(chunkBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, normal_offset, vertex_length), gl.STATIC_DRAW);
+            instance.exports.chunk_update_buffers(chunkBuffer);
+            let visible_block_length = instance.exports.chunk_visible_block_count(chunkBuffer);
+            
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            let vertex_offset = instance.exports.chunk_get_vertex_buffer(chunkBuffer);
+            let vertex_length = visible_block_length * 24 * 3;
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, vertex_offset, vertex_length), gl.STATIC_DRAW);
+            
+            const normalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+            let normal_offset = instance.exports.chunk_get_normal_buffer(chunkBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, normal_offset, vertex_length), gl.STATIC_DRAW);
+        
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+            let texture_offset = instance.exports.chunk_get_texture_buffer(chunkBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, texture_offset, vertex_length / 3 * 2), gl.STATIC_DRAW);
+        
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            let index_offset = instance.exports.chunk_get_index_buffer(chunkBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(instance.exports.memory.buffer, index_offset, vertex_length * 36 / 24 / 3), gl.STATIC_DRAW);    
+        
+            cached_buffers[chunkBuffer] = {
+                position: positionBuffer,
+                normal: normalBuffer,
+                textureCoord: textureCoordBuffer,
+                indices: indexBuffer,
+                blockCount: visible_block_length,
+            }
 
-    const textureCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-    let texture_offset = instance.exports.chunk_get_texture_buffer(chunkBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, texture_offset, vertex_length / 3 * 2), gl.STATIC_DRAW);
-
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    let index_offset = instance.exports.chunk_get_index_buffer(chunkBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(instance.exports.memory.buffer, index_offset, vertex_length * 36 / 24 / 3), gl.STATIC_DRAW);
-
-    this.cached_buffers = {
-        position: positionBuffer,
-        normal: normalBuffer,
-        textureCoord: textureCoordBuffer,
-        indices: indexBuffer,
-        blockCount: visible_block_length,
+        })();
     }
 
-    return this.cached_buffers;
+    return cached_buffers[chunkBuffer];
 
 }
 

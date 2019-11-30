@@ -51,7 +51,7 @@ function getProgramInfo(gl) {
 
       highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
       vLighting = ambientLight + (directionalLightColor * directional);
-      vDistance = 1.0 + 0.001 * exp(distance(gl_Position.xyz, vec3(0.0,0.0,0.0))/5.0);
+      vDistance = 1.0 + 0.001 * exp(distance(gl_Position.xyz, vec3(0.0,0.0,0.0))/10.0);
     }
   `;
 
@@ -140,6 +140,7 @@ function loadTexture(gl, url) {
          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  
 
       }
     };

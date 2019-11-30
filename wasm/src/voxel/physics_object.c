@@ -1,6 +1,6 @@
 
 #include <math.h>
-#include <voxel/vector.h>
+#include <voxel/linalg.h>
 #include <voxel/physics_object.h>
 
 /**
@@ -33,12 +33,12 @@ int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     float this_a = block->size.x;
     float this_b = block->size.y;
     float this_c = block->size.z;
-    float player_x = player->base.position.x;
-    float player_y = player->base.position.y;
-    float player_z = player->base.position.z;
-    float player_a = player->base.size.x;
-    float player_b = player->base.size.y;
-    float player_c = player->base.size.z;
+    float player_x = player->position.x;
+    float player_y = player->position.y;
+    float player_z = player->position.z;
+    float player_a = player->size.x;
+    float player_b = player->size.y;
+    float player_c = player->size.z;
 
     if (this_x > player_x && this_x - player_x < this_a + player_a) {
         x = (this_x - player_x) - (this_a + player_a);
@@ -59,14 +59,17 @@ int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     }
 
     if (abs(x) < abs(y) && abs(x) < abs(z)) {
-        player->base.position.x += x;
+        player->position.x += x;
     }
     if (abs(y) < abs(x) && abs(y) < abs(z)) {
-        player->base.position.y += y;
-        if (y > 0) return 1;
+        player->position.y += y;
+        if (y > 0) {
+            player->velocity.y = 0;
+            return 1;
+        }
     }
     if (abs(z) < abs(y) && abs(z) < abs(x)) {
-        player->base.position.z += z;
+        player->position.z += z;
     }
     return 0;
 }
@@ -92,37 +95,37 @@ float ray_intersects(const ray3_t *ray, const aabb3_t *obj) {
 
     vec3_t right;
     vec3_scale(&ray->direction, time_pos.x, &right);
-    if (aabb3_contains(&rel, &right) && time_pos.x < time_min) {
+    if (aabb3_contains(&rel, &right) && time_pos.x > 0 && time_pos.x < time_min) {
         time_min = time_pos.x;
     }
 
     vec3_t top;
     vec3_scale(&ray->direction, time_pos.y, &top);
-    if (aabb3_contains(&rel, &top) && time_pos.y < time_min) {
+    if (aabb3_contains(&rel, &top) && time_pos.y > 0 && time_pos.y < time_min) {
         time_min = time_pos.y;
     }
 
     vec3_t back;
     vec3_scale(&ray->direction, time_pos.z, &back);
-    if (aabb3_contains(&rel, &back) && time_pos.z < time_min) {
+    if (aabb3_contains(&rel, &back) && time_pos.z > 0 && time_pos.z < time_min) {
         time_min = time_pos.z;
     }
 
     vec3_t left;
     vec3_scale(&ray->direction, time_neg.x, &left);
-    if (aabb3_contains(&rel, &left) && time_neg.x < time_min) {
+    if (aabb3_contains(&rel, &left) && time_neg.x > 0 && time_neg.x < time_min) {
         time_min = time_neg.x;
     }
 
     vec3_t bottom;
     vec3_scale(&ray->direction, time_neg.y, &bottom);
-    if (aabb3_contains(&rel, &bottom) && time_neg.y < time_min) {
+    if (aabb3_contains(&rel, &bottom) && time_neg.y > 0 && time_neg.y < time_min) {
         time_min = time_neg.y;
     }
 
     vec3_t front;
     vec3_scale(&ray->direction, time_neg.z, &front);
-    if (aabb3_contains(&rel, &front) && time_neg.z < time_min) {
+    if (aabb3_contains(&rel, &front) && time_neg.z > 0&& time_neg.z < time_min) {
         time_min = time_neg.z;
     }
 

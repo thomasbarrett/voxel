@@ -65,6 +65,7 @@
         "stdint.h": "c",
         "physics_object.h": "c",
         "cube.h": "c",
-        "vector.h": "c"
+        "vector.h": "c",
+        "linalg.h": "c"
     }
 }

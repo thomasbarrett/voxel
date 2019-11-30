@@ -2,7 +2,7 @@
  * This file contains
  * 
  */
-#include <voxel/vector.h>
+#include <voxel/linalg.h>
 #include <math.h>
 
 void vec3_init(vec3_t *a, float x, float y, float z) {
@@ -41,15 +41,6 @@ void vec3_scale(const vec3_t *a, float b, vec3_t *c) {
     c->z = b * a->z;
 }
 
-void vec3_rotate_y(const vec3_t *a, float theta, vec3_t *c) {
-    vec3_t temp = *a;
-    float ctheta = cos(theta);
-    float stheta = sin(theta);
-    c->x = ctheta * temp.x + stheta * temp.z;
-    c->y = temp.y;
-    c->z = -stheta * temp.x + ctheta * temp.z;
-}
-
 float vec3_distance(const vec3_t *a, const vec3_t *b) {
     float u = a->x - b->x;
     float v = a->y - b->y;
@@ -70,81 +61,94 @@ void vec3_normalize(vec3_t *a) {
     vec3_scale(a, 1.0 / norm, a);
 }
 
-float* mat4_create() {
-    return malloc(sizeof(float) * 16);
+void mat4_rotate_x(float theta, mat4_t *mat) {
+    float ctheta = cos(theta);
+    float stheta = sin(theta);
+    mat->entries[0][0] = 1.0;
+    mat->entries[1][0] = 0.0;
+    mat->entries[2][0] = 0.0;
+    mat->entries[3][0] = 0.0;
+    
+    mat->entries[0][1] = 0.0;
+    mat->entries[1][1] = ctheta;
+    mat->entries[2][1] = -stheta;
+    mat->entries[3][1] = 0.0;
+
+    mat->entries[0][2] = 0.0;
+    mat->entries[1][2] = stheta;
+    mat->entries[2][2] = ctheta;
+    mat->entries[3][2] = 0.0;
+
+    mat->entries[0][3] = 0.0;
+    mat->entries[1][3] = 0.0;
+    mat->entries[2][3] = 0.0;
+    mat->entries[3][3] = 1.0;
 }
 
-void mat4_rotate_x(float theta, float c[16]) {
+
+void mat4_rotate_y(float theta, mat4_t *mat) {
     float ctheta = cos(theta);
     float stheta = sin(theta);
 
-    c[0] = 1.0;
-    c[4] = 0.0;
-    c[8] = 0.0;
-    c[12] = 0.0;
+    mat->entries[0][0] = ctheta;
+    mat->entries[1][0] = 0.0;
+    mat->entries[2][0] = stheta;
+    mat->entries[3][0] = 0.0;
     
-    c[1] = 0.0;
-    c[5] = ctheta;
-    c[9] = -stheta;
-    c[13] = 0.0;
+    mat->entries[0][1] = 0.0;
+    mat->entries[1][1] = 1.0;
+    mat->entries[2][1] = 0.0;
+    mat->entries[3][1] = 0.0;
 
-    c[2] = 0.0;
-    c[6] = stheta;
-    c[10] = ctheta;
-    c[14] = 0.0;
+    mat->entries[0][2] = -stheta;
+    mat->entries[1][2] = 0.0;
+    mat->entries[2][2] = ctheta;
+    mat->entries[3][2] = 0.0;
 
-    c[3] = 0.0;
-    c[7] = 0.0;
-    c[11] = 0.0;
-    c[15] = 1.0;
+    mat->entries[0][3] = 0.0;
+    mat->entries[1][3] = 0.0;
+    mat->entries[2][3] = 0.0;
+    mat->entries[3][3] = 1.0;
 }
 
 
-void mat4_rotate_y(float theta, float c[16]) {
-    float ctheta = cos(theta);
-    float stheta = sin(theta);
-
-    c[0] = ctheta;
-    c[4] = 0.0;
-    c[8] = stheta;
-    c[12] = 0.0;
-    
-    c[1] = 0.0;
-    c[5] = 1.0;
-    c[9] = 0.0;
-    c[13] = 0.0;
-
-    c[2] = -stheta;
-    c[6] = 0.0;
-    c[10] = ctheta;
-    c[14] = 0.0;
-
-    c[3] = 0.0;
-    c[7] = 0.0;
-    c[11] = 0.0;
-    c[15] = 1.0;
-}
-
-
-void mat4_multiply(float a[4][4], float b[4][4], float c[4][4]) {
+void mat4_multiply(mat4_t *a, mat4_t *b, mat4_t *c) {
     float tmp1[4][4];
     float tmp2[4][4];
-    memcpy(&tmp1, a, 16 * sizeof(float));
-    memcpy(&tmp2, b, 16 * sizeof(float));
+    memcpy(&tmp1, &a->entries, 16 * sizeof(float));
+    memcpy(&tmp2, &b->entries, 16 * sizeof(float));
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            c[i][j] = 0; 
+            c->entries[i][j] = 0; 
             for (int k = 0; k < 4; k++) {
-                c[i][j] += tmp1[i][k] * tmp2[k][j]; 
+                c->entries[i][j] += tmp1[i][k] * tmp2[k][j]; 
             }
         }
     }
 }
 
-void mat4_projection(float fov, float near, float far, float aspect, float c[16]) {
+void mat4_vec3_multiply(mat4_t *a, vec3_t *b, vec3_t *c) {
+    float tmp1[4];
+    float tmp2[4];
+    tmp1[0] = b->x;
+    tmp1[1] = b->y;
+    tmp1[2] = b->z;
+    tmp1[3] = 1;
+    for (int i = 0; i < 4; i++) {
+        tmp2[i] = 0; 
+        for (int j = 0; j < 4; j++) {
+            tmp2[i] += a->entries[j][i] * tmp1[j];
+        }
+    }
+    c->x = tmp2[0];
+    c->y = tmp2[1];
+    c->z = tmp2[2];
+}
+
+void mat4_projection(float fov, float near, float far, float aspect, mat4_t *mat) {
     float f = 1.0 / tan(fov / 2);
     float nf = 1 / (near - far);
-    
+    float *c = (float*) &mat->entries;
     c[0] = f / aspect;
     c[1] = 0.0;
     c[2] = 0.0;
@@ -166,7 +170,9 @@ void mat4_projection(float fov, float near, float far, float aspect, float c[16]
     c[15] = 0.0;
 }
 
-void mat4_translate(float x, float y, float z, float c[16]) {
+void mat4_translate(float x, float y, float z, mat4_t *mat) {
+    float *c = (float*) &mat->entries;
+
     c[0] = 1.0;
     c[1] = 0.0;
     c[2] = 0.0;
