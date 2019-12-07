@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <voxel/physics_object.h>
 #include <voxel/player.h>
+#include <voxel/chunk_update.h>
 
 #define CHUNK_SIZE 16
 #define CHUNK_HEIGHT 256
@@ -38,8 +39,17 @@ aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
 void chunk_update_buffers(struct chunk_t *self);
 uint8_t chunk_set(struct chunk_t *self, int x, int y, int z, enum block_t b);
 struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
+
+/**
+ * Updates a chunk by applying a series of block replacements from the 
+ * chunk_update parameter. Note that in the case that a chunk_update_t contains multiple updates at the
+ * same location, the last update is the only one is applied.
+ */
+void chunk_apply_update(struct chunk_t *self, chunk_update_t *update);
+
 #define CHUNK_CAPACITY 1024
 #define VISIBLE_CHUNK_RADIUS 2
+#define PLAYER_COUNT 5
 
 /*
  * Represents an infinite voxel world composed of chunks.
@@ -50,6 +60,7 @@ struct world_t {
     int chunk_count;
     mat4_t projection_matrix;
     player_t player;
+    player_t players[PLAYER_COUNT];
     struct chunk_t* chunks[CHUNK_CAPACITY];
 };
 
@@ -67,8 +78,11 @@ struct world_t* world_init();
  */
 void world_destroy(struct world_t *self);
 
+float world_get_x(struct world_t *self);
+float world_get_y(struct world_t *self);
+float world_get_z(struct world_t *self);
 
-player_t *world_get_player(struct world_t *self);
+player_t *world_get_player(struct world_t *self, int index);
 struct chunk_t* world_get_chunk(struct world_t *self, int x, int z);
 void world_break_block(struct world_t *self, int x, int y, int z);
 int world_get_chunk_count(struct world_t *self);
@@ -79,5 +93,4 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self);
 int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int u);
 void world_click_handler(struct world_t *self);
 void world_move_handler(struct world_t *self, float dx, float dy);
-
 #endif /* WORLD_H */

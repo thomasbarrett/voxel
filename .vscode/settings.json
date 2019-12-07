@@ -66,6 +66,17 @@
         "physics_object.h": "c",
         "cube.h": "c",
         "vector.h": "c",
-        "linalg.h": "c"
+        "linalg.h": "c",
+        "player.h": "c",
+        "world.h": "c",
+        "stdlib.h": "c",
+        "chunk_update.h": "c",
+        "unistd.h": "c",
+        "map": "cpp",
+        "string.h": "c",
+        "assert.h": "c",
+        "socket.h": "c",
+        "in.h": "c",
+        "message.h": "c"
     }
 }

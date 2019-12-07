@@ -2,15 +2,20 @@
 #include <stdlib.h>
 #include <voxel/physics_object.h>
 #include <voxel/world.h>
+#include <server/message.h>
 
+/*
+ * The dim(6) is block face, in the order defined in cube.
+ * top 
+ */
 int block_texture_index[][6][2] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     2, 0, 2, 0, 1, 0, 3, 0, 2, 0, 2, 0,
     3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0,
-    4, 0, 4, 0, 4, 0,  4, 0, 4, 0, 4, 0,
+    4, 0, 4, 0, 4, 0, 4, 0, 4, 0, 4, 0,
     5, 0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0,
-    0, 1, 0, 1, 0, 1,  0, 1, 0, 1, 0, 1,
+    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     2, 1, 2, 1, 2, 1,  2, 1, 2, 1, 2, 1,
     4, 1, 4, 1, 3, 1, 3, 1, 4, 1, 4, 1,
@@ -21,6 +26,17 @@ aabb3_t* chunk_get_physics_objects(struct chunk_t *self);
 void chunk_update_buffers(struct chunk_t *self);
 uint8_t chunk_set(struct chunk_t *self, int x, int y, int z, enum block_t b);
 struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed);
+
+float world_get_x(struct world_t *self) {
+    return self->player.physics_object.position.x;
+}
+float world_get_y(struct world_t *self) {
+    return self->player.physics_object.position.y;
+}
+
+float world_get_z(struct world_t *self) {
+    return self->player.physics_object.position.z;
+}
 
 /*
  * Constructor for voxel world.
@@ -35,6 +51,12 @@ struct world_t* world_init() {
     self->player.selection = NULL;
     self->player.theta = 0;
     self->player.phi = 0;
+    for (int i = 0; i < PLAYER_COUNT; i++) {
+        vec3_init(&self->players[i].physics_object.position, 10 * i, 110, 10 * i);
+        vec3_init(&self->players[i].physics_object.size, 0.5, 2.0, 0.5);
+        vec3_init(&self->players[i].physics_object.velocity, 0, 0, 0);
+        player_init(&self->players[i]);
+    }
     return self;
 }
 
@@ -46,9 +68,10 @@ void world_destroy(struct world_t *self) {
     free(self);
 }
 
-player_t *world_get_player(struct world_t *self) {
-    return &self->player;
+player_t *world_get_player(struct world_t *self, int i) {
+    return &self->players[i];
 }
+
 
 /*
  * Retrieves the chunk at the given coordinates.
@@ -68,11 +91,26 @@ struct chunk_t* world_get_chunk(struct world_t *self, int x, int z) {
     return NULL;
 }
 
-void world_break_block(struct world_t *self, int x, int y, int z) {
+void world_set_block(struct world_t *self, int x, int y, int z, int b) {
     int chunkX = floor((float) x / CHUNK_SIZE);
     int chunkZ = floor((float) z / CHUNK_SIZE);
     struct chunk_t *chunk = world_get_chunk(self, chunkX, chunkZ);
-    chunk_set(chunk, x - chunkX * CHUNK_SIZE, y, z - chunkZ * CHUNK_SIZE, AIR);
+    int lx = x - chunkX * CHUNK_SIZE;
+    int ly = y;
+    int lz = z - chunkZ * CHUNK_SIZE;
+    chunk_set(chunk, lx, ly, lz, AIR);
+}
+
+void world_break_block(struct world_t *self, int x, int y, int z) {
+    world_set_block(self, x, y, z, AIR);
+    block_update_t data;
+    data.message = BLOCK_UPDATE;
+    data.pid = get_pid();
+    data.x = x;
+    data.y = y;
+    data.z = z;
+    data.block = AIR;
+    send(&data, sizeof(data));
 }
 
 int world_get_chunk_count(struct world_t *self) {
@@ -132,9 +170,12 @@ aabb3_t *world_ray_intersect(ray3_t *ray, struct world_t *self) {
         }
     }
     
-    if (min_time < 1E6) {
+    if (min_time < 10) {
         self->player.selection = min_block;
+    } else {
+        self->player.selection = NULL;
     }
+
     return min_block;
 }
 
@@ -144,8 +185,6 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
     vec3_init(&ray.direction, sin(3.14159 - self->player.theta) * cos(self->player.phi), -sin(self->player.phi), cos(3.14159 - self->player.theta) * cos(self->player.phi));   
     world_ray_intersect(&ray, self);
     
-   
-
     vec3_t velocity;
     vec3_t velocity_left;
     vec3_init(&velocity, 0, 0, 8);
@@ -201,6 +240,14 @@ int world_update(struct world_t *self, float dt, int f, int b, int l, int r, int
       self->player.physics_object.velocity.y = 0.0;
     }
 
+    position_update_t data;
+    data.message = POSITION_UPDATE;
+    data.pid = get_pid();
+    data.x = self->player.physics_object.position.x / 2;
+    data.y = self->player.physics_object.position.y / 2;
+    data.z = self->player.physics_object.position.z / 2;
+    send(&data, sizeof(data));
+
     int center_x = self->player.physics_object.position.x / 2 / CHUNK_SIZE;
     int center_z = self->player.physics_object.position.z / 2 / CHUNK_SIZE;
 
@@ -230,4 +277,18 @@ void world_click_handler(struct world_t *self) {
 void world_move_handler(struct world_t *self, float dx, float dy) {
     self->player.theta += dx * 3.14159;
     self->player.phi += dy * 3.14159;
+}
+
+void world_message_handler(struct world_t *self, void *message) {
+    bulk_update_t *bulk = (bulk_update_t*) message;
+    positions_update_t *pos_update = &bulk->position_update;
+    for (int p = 0; p < 5; p++) {
+        if (get_pid() != p) {
+            player_set_position(&self->players[p], pos_update->positions[p][0], pos_update->positions[p][1], pos_update->positions[p][2]);
+        }
+    }
+    block_updates_t *block_update = &bulk->block_updates;
+    for (int i = 0; i < block_update->length; i++) {
+        world_set_block(self, block_update->updates[i].x, block_update->updates[i].y, block_update->updates[i].z, block_update->updates[i].block);
+    }
 }

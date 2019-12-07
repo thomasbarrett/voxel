@@ -1,8 +1,11 @@
 import { KeyboardInput } from './keyboard.js'
 import { FPSTracker } from './fps.js'
 
-let world = null;
+const server_address = '10.8.29.204'
+const server_port = '3000'
 
+let world = null;
+window.pid = 0;
 
 /* WebGL Canvas */
 const canvas = document.getElementById('glcanvas');
@@ -44,9 +47,20 @@ async function load_game_source() {
                 sin: Math.sin,
                 cos: Math.cos,
                 tan: Math.tan,
+                get_pid: function() {
+                    return window.pid;
+                },
                 floor: Math.floor,
                 print_float: function(num) {
                     console.log(num);
+                },
+                send: function(pointer, size) {
+                    let memory_buffer = instance.exports.memory.buffer;
+                    let body = memory_buffer.slice(pointer, pointer + size);
+                    fetch(`http://${server_address}:${server_port}/`, {
+                        method: 'post',
+                        body
+                    });
                 },
                 mem_doctor: function(lo, hi) {
                     let memory_buffer = instance.exports.memory.buffer;
@@ -73,6 +87,7 @@ async function load_game_source() {
     window.instance = instance;
     instance.exports.memory.grow(200);
     instance.exports.mem_init();
+    
 };
 
 function game_loop() {
@@ -94,6 +109,23 @@ function game_loop() {
 
     let programInfo = getProgramInfo(gl);
     world = instance.exports.world_init();
+
+    setInterval(() => {
+        fetch(`http://${server_address}:${server_port}/`).then(result => {
+            return result.arrayBuffer();
+        }).then(result => {
+            let src_view = new Uint8Array(result);
+            let pointer = instance.exports.malloc(result.byteLength);
+            let array_buffer = instance.exports.memory.buffer;
+            let dst_view = new Uint8Array(array_buffer, pointer, result.byteLength);
+            for (let i = 0; i < result.byteLength; i++) {
+                dst_view[i] = src_view[i];
+            }
+            instance.exports.world_message_handler(world, pointer);
+            instance.exports.free(pointer);
+        });
+    }, 100);
+
     let texture = loadTexture(gl, './textures/blocks.png');
     var then = 0;
 
@@ -102,7 +134,7 @@ function game_loop() {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - then;
         then = now;
-        update(world, deltaTime);
+        update(world, deltaTime > 0.1? 0.1: deltaTime);
         render(gl, programInfo, world, texture);
         requestAnimationFrame(run);
     }

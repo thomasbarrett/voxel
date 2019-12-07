@@ -58,11 +58,11 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
     float noise = perlin2d(tree_x , tree_z, 0.05, 3);
     int tree_y = 10 * noise + 100;
     for (int i = -2; i <= 2; i++) {
-        for (int j = 0; j < 9; j++) {
+        for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
-                if (i == 0 && k == 0) {
+                if (i == 0 && k == 0  && j < 6) {
                     self->blocks[8 + i][tree_y + j][8 + k] = WOOD;
-                } else if (j > 4 && abs(i) * abs(k) < 4) {
+                } else if (i * i + k * k + (j-6) * (j-6) < 8) {
                     self->blocks[8 + i][tree_y + j][8 + k] = LEAVES;
                 }
             }
@@ -74,11 +74,11 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
     float noise2 = perlin2d(tree2_x , tree2_z, 0.05, 3);
     int tree2_y = 10 * noise2 + 100;
     for (int i = -2; i <= 2; i++) {
-        for (int j = 0; j < 9; j++) {
+        for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
-                if (i == 0 && k == 0) {
+                if (i == 0 && k == 0 && j < 6) {
                     self->blocks[12 + i][tree2_y + j][4 + k] = WOOD;
-                } else if (j > 4 && abs(i) * abs(k) < 4) {
+                } else if (i * i + k * k + (j-6) * (j-6) < 8) {
                     self->blocks[12 + i][tree2_y + j][4 + k] = LEAVES;
                 }
             }
@@ -385,4 +385,12 @@ void chunk_update_buffers(struct chunk_t *self) {
         self->physics_objects = chunk_compute_physics_objects(self, visible_block_count);
     }
     self->update = FALSE;
+}
+
+void chunk_apply_update(struct chunk_t *self, chunk_update_t *update) {
+    for (int i = 0; i < update->size; i++) {
+        chunk_entry_t entry = update->data[i];
+        self->blocks[entry.x][entry.y][entry.z] = entry.block;
+    }
+    self->update = 1;
 }

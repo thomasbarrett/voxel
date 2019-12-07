@@ -1,5 +1,40 @@
 const cached_buffers = {}
 
+function player_get_buffers(player, gl) {
+
+    instance.exports.player_update_buffers(player);
+    
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    let vertex_offset = instance.exports.player_get_vertex_buffer(player);
+    let vertex_length = 1 * 24 * 3;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, vertex_offset, vertex_length), gl.STATIC_DRAW);
+    
+    const normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    let normal_offset = instance.exports.player_get_normal_buffer(player);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, normal_offset, vertex_length), gl.STATIC_DRAW);
+
+    const textureCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+    let texture_offset = instance.exports.player_get_texture_buffer(player);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(instance.exports.memory.buffer, texture_offset, vertex_length / 3 * 2), gl.STATIC_DRAW);
+
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    let index_offset = instance.exports.player_get_index_buffer(player);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(instance.exports.memory.buffer, index_offset, vertex_length * 36 / 24 / 3), gl.STATIC_DRAW);    
+
+    return {
+        position: positionBuffer,
+        normal: normalBuffer,
+        textureCoord: textureCoordBuffer,
+        indices: indexBuffer,
+        blockCount: 1,
+    }
+
+}
+
 function chunk_get_buffers(chunkBuffer, gl) {
 
     if (instance.exports.chunk_get_block_update(chunkBuffer) == 1 || !cached_buffers[chunkBuffer]) {
@@ -89,4 +124,39 @@ function world_render(gl, worldBuffer, texture, programInfo, aspect_ratio) {
         gl.drawElements(gl.TRIANGLES, 36 * buffers.blockCount, gl.UNSIGNED_SHORT, 0)
 
     }
+
+    for (let p = 0; p < 5; p++) {
+        let player = instance.exports.world_get_player(worldBuffer, p);
+        let buffers = player_get_buffers(player, gl);
+
+        // Tell WebGL how to pull out the positions from the position
+        // buffer into the vertexPosition attribute
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+        // Tell WebGL how to pull out the texture coordinates from
+        // the texture coordinate buffer into the textureCoord attribute.
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+        gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+
+        // Tell WebGL how to pull out the normals from
+        // the normal buffer into the vertexNormal attribute.
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, 3, gl.FLOAT,  false, 0, 0);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
+
+        // Tell WebGL which indices to use to index the vertices
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        gl.useProgram(programInfo.program);
+        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+
+        gl.drawElements(gl.TRIANGLES, 36 * buffers.blockCount, gl.UNSIGNED_SHORT, 0)
+    }
+    
 }

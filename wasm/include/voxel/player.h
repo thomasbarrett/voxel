@@ -25,6 +25,19 @@ typedef struct player {
     aabb3_t *selection;
     float theta;
     float phi;
+    float *vertex_buffer;
+    unsigned short *index_buffer;
+    float *normal_buffer;
+    float *texture_buffer;
+    int update;
 } player_t;
+
+void player_set_position(player_t *player, float x, float y, float z);
+void player_init(player_t *player);
+float* player_get_vertex_buffer(player_t *self);
+unsigned short * player_get_index_buffer(player_t *self);
+float* player_get_normal_buffer(player_t *self);
+float* player_get_texture_buffer(player_t *self);
+void player_update_buffers(player_t *self);
 
 #endif /* PLAYER_H */
