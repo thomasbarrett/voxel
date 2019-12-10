@@ -65,7 +65,7 @@ void* mem_sbrk(size_t size) {
 
 int mem_init(void) {
     brk_ = (size_t)(__builtin_wasm_memory_size(0) * PAGE_SIZE);
-    header_t *header = mem_heap_lo();
+    header_t *header = (header_t *) mem_heap_lo();
     header_t *footer = ((header_t *) mem_heap_hi()) - 1;
     size_t block_size = (size_t) footer - (size_t) header + sizeof(header_t);
     header_set(header, 1, block_size);
@@ -93,8 +93,8 @@ void split(header_t *header, size_t size) {
 }
 
 void* malloc(size_t size) {
-
-    header_t *current_header = mem_heap_lo();
+    size = (size + ALIGNMENT-1) & ~(ALIGNMENT-1);
+    header_t *current_header = (header_t *) mem_heap_lo();
     while ((size_t) current_header < (size_t) mem_heap_hi()) {
         int current_free = header_get_free(current_header);
         int current_size = header_get_size(current_header);
@@ -106,7 +106,7 @@ void* malloc(size_t size) {
         current_header = current_footer + 1;
     }
     
-    header_t *header = mem_sbrk(2 * sizeof(header_t) + size);
+    header_t *header = (header_t *) mem_sbrk(2 * sizeof(header_t) + size);
     header_t *footer = (header_t *) mem_heap_hi() - 1;
     size_t block_size = (size_t) footer - (size_t) header + sizeof(header_t);
     header_set(header, 0, block_size);
@@ -115,6 +115,8 @@ void* malloc(size_t size) {
 }
 
 void* realloc(void *p, size_t size) {
+    size = (size + ALIGNMENT-1) & ~(ALIGNMENT-1);
+
     if (p != NULL) {
         header_t *header = (header_t*) p - 1;
         size_t existing_block_size = header_get_size(header);
@@ -125,7 +127,7 @@ void* realloc(void *p, size_t size) {
         } else {
             void *n = malloc(size);
             memcpy(n, p, existing_block_size - 2 * sizeof(header_t));
-            free(p);
+            free(p); 
             return n;    
         }
     } else {
@@ -171,4 +173,12 @@ void free(void *p) {
         header_t *header = (header_t*) p - 1;
         coalesce(header);
     }
+}
+
+void * operator new(unsigned long size) {
+    return malloc(size);
+}
+
+void operator delete(void* p) {
+    free(p);
 }

@@ -94,6 +94,34 @@ function getProgramInfo(gl) {
   };
 }
 
+function getMeshProgramInfo(gl) {
+  const vsSource = `
+    attribute vec4 aVertexPosition;
+    uniform mat4 uModelViewMatrix;
+
+    void main(void) {
+      gl_Position = uModelViewMatrix * aVertexPosition;
+    }
+  `;
+
+  const fsSource = `
+    void main(void) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+  `;
+
+  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  return {
+    program: shaderProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+    },
+    uniformLocations: {
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+    },
+  };
+}
+
 //
 // Initialize a texture and load an image.
 // When the image finished loading copy it into the texture.

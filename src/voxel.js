@@ -1,5 +1,6 @@
 import { KeyboardInput } from './keyboard.js'
 import { FPSTracker } from './fps.js'
+import { Graphics } from './gpu.js'
 
 const server_address = '10.8.29.204'
 const server_port = '3000'
@@ -9,6 +10,14 @@ window.pid = 0;
 
 /* WebGL Canvas */
 const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl', {antialias: false});
+if (!gl) {
+    alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+}
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+gl.enable(gl.BLEND);
+
+const graphics = new Graphics(gl);
 
 /* FPS Tracker UI Element */
 const frameCounter = new FPSTracker('fps');
@@ -57,10 +66,11 @@ async function load_game_source() {
                 send: function(pointer, size) {
                     let memory_buffer = instance.exports.memory.buffer;
                     let body = memory_buffer.slice(pointer, pointer + size);
+                    /*
                     fetch(`http://${server_address}:${server_port}/`, {
                         method: 'post',
                         body
-                    });
+                    });*/
                 },
                 mem_doctor: function(lo, hi) {
                     let memory_buffer = instance.exports.memory.buffer;
@@ -79,13 +89,21 @@ async function load_game_source() {
                     
                     console.log(`${block_count} blocks found`);
                     console.log(blocks);
-                }
+                },
+
+                create_buffer: graphics.createBuffer.bind(graphics),
+                update_vertex_buffer: graphics.updateVertexBuffer.bind(graphics),
+                update_normal_buffer: graphics.updateNormalBuffer.bind(graphics),
+                update_index_buffer: graphics.updateIndexBuffer.bind(graphics),
+                update_texture_buffer: graphics.updateTextureBuffer.bind(graphics),
+                delete_buffer: graphics.deleteBuffer.bind(graphics),
+                draw_buffer: graphics.drawBuffer.bind(graphics)
             }
         }
     );
 
     window.instance = instance;
-    instance.exports.memory.grow(200);
+    instance.exports.memory.grow(400);
     instance.exports.mem_init();
     
 };
@@ -99,17 +117,10 @@ function game_loop() {
         instance.exports.world_click_handler(world);
     });
 
-    const gl = canvas.getContext('webgl', {antialias: false});
-    if (!gl) {
-        alert('Unable to initialize WebGL. Your browser or machine may not support it.');
-        return;
-    }
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
-
-    let programInfo = getProgramInfo(gl);
+    
     world = instance.exports.world_init();
 
+    /*
     setInterval(() => {
         fetch(`http://${server_address}:${server_port}/`).then(result => {
             return result.arrayBuffer();
@@ -125,8 +136,8 @@ function game_loop() {
             instance.exports.free(pointer);
         });
     }, 100);
+*/
 
-    let texture = loadTexture(gl, './textures/blocks.png');
     var then = 0;
 
     // Draw the scene repeatedly
@@ -135,7 +146,15 @@ function game_loop() {
         const deltaTime = now - then;
         then = now;
         update(world, deltaTime > 0.1? 0.1: deltaTime);
-        render(gl, programInfo, world, texture);
+        gl.clearColor(0.554, 0.746, 0.988, 1.0); 
+        gl.clearDepth(1.0); 
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        const aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        instance.exports.on_animation_frame(world, deltaTime, aspect_ratio);
+        frameCounter.increment();
+
         requestAnimationFrame(run);
     }
 
@@ -153,11 +172,6 @@ function update(world, dt) {
     );
 }
 
-function render(gl, programInfo, world, texture) {
-    let aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    world_render(gl, world, texture, programInfo, aspect_ratio);
-    frameCounter.increment();
-}
 
 load_game_source().then(() => {
     game_loop();   

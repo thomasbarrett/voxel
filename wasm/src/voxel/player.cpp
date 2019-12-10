@@ -2,6 +2,7 @@
 #include "voxel/player.h"
 #include "voxel/cube.h"
 #include "voxel/world.h"
+#include "voxel/Mesh.hpp"
 
 void player_compute_vertex_buffer(player_t *self) {
     for (int v = 0; v < 24; v++) {
@@ -43,15 +44,20 @@ void player_init(player_t *player) {
     player->theta = 0;
     player->phi = 0;
     player->selection = NULL;
-    player->vertex_buffer = malloc(sizeof(float) * 3 * 24);
-    player->index_buffer = malloc(sizeof(unsigned short) * 36);
-    player->normal_buffer = malloc(sizeof(float) * 3 * 24);
-    player->texture_buffer = malloc(sizeof(float) * 2 * 24);
+    player->vertex_buffer = (float *) malloc(sizeof(float) * 3 * 24);
+    player->index_buffer = (unsigned short *) malloc(sizeof(unsigned short) * 36);
+    player->normal_buffer = (float *) malloc(sizeof(float) * 3 * 24);
+    player->texture_buffer = (float *) malloc(sizeof(float) * 2 * 24);
     player->update = 1;
+    player->buffer = create_buffer();
     player_compute_vertex_buffer(player);
     player_compute_index_buffer(player);
     player_compute_normal_buffer(player);
     player_compute_texture_buffer(player);
+    update_vertex_buffer(player->buffer, player->vertex_buffer, 24);
+    update_index_buffer(player->buffer, player->index_buffer, 12);
+    update_normal_buffer(player->buffer, player->normal_buffer, 24);
+    update_texture_buffer(player->buffer, player->texture_buffer, 24);
 }
 
 
@@ -75,8 +81,10 @@ void player_update_buffers(player_t *self) {
     if (self != NULL) {
         if (self->update) {
             player_compute_vertex_buffer(self);
+            update_vertex_buffer(self->buffer, self->vertex_buffer, 24);
         }
         self->update = 0;
     }
     
 }
+

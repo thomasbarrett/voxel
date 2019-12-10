@@ -30,6 +30,7 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
     self->normal_buffer = NULL;
     self->texture_buffer = NULL;
     self->physics_objects = NULL;
+    self->buffer = create_buffer();
     self->update = TRUE;
 
     for (int i = 0; i < CHUNK_SIZE; i++) {
@@ -383,6 +384,11 @@ void chunk_update_buffers(struct chunk_t *self) {
         self->index_buffer = chunk_compute_index_buffer(self, visible_block_count);
         self->texture_buffer = chunk_compute_texture_buffer(self, visible_block_count);
         self->physics_objects = chunk_compute_physics_objects(self, visible_block_count);
+        update_vertex_buffer(self->buffer, self->vertex_buffer, visible_block_count * 24);
+        update_normal_buffer(self->buffer, self->normal_buffer, visible_block_count * 24);
+        update_index_buffer (self->buffer, self->index_buffer, visible_block_count * 12);
+        update_texture_buffer (self->buffer, self->texture_buffer , visible_block_count * 24);
+
     }
     self->update = FALSE;
 }

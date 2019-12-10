@@ -29,15 +29,24 @@ typedef struct player {
     unsigned short *index_buffer;
     float *normal_buffer;
     float *texture_buffer;
+    int buffer;
     int update;
 } player_t;
 
-void player_set_position(player_t *player, float x, float y, float z);
-void player_init(player_t *player);
-float* player_get_vertex_buffer(player_t *self);
-unsigned short * player_get_index_buffer(player_t *self);
-float* player_get_normal_buffer(player_t *self);
-float* player_get_texture_buffer(player_t *self);
-void player_update_buffers(player_t *self);
+extern "C" void player_set_position(player_t *player, float x, float y, float z);
+extern "C" void player_init(player_t *player);
+extern "C" float* player_get_vertex_buffer(player_t *self);
+extern "C" unsigned short * player_get_index_buffer(player_t *self);
+extern "C" float* player_get_normal_buffer(player_t *self);
+extern "C"  float* player_get_texture_buffer(player_t *self);
+extern "C" void player_update_buffers(player_t *self);
+
+extern "C" int create_buffer();
+extern "C" void update_vertex_buffer(int, float*, int);
+extern "C" void update_normal_buffer(int, float*, int);
+extern "C" void update_index_buffer(int, unsigned short*, int);
+extern "C" void update_texture_buffer(int, float*, int);
+extern "C" void delete_buffer(int);
+extern "C" void draw_buffer(int, mat4_t*);
 
 #endif /* PLAYER_H */

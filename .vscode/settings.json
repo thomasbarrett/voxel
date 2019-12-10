@@ -77,6 +77,13 @@
         "assert.h": "c",
         "socket.h": "c",
         "in.h": "c",
-        "message.h": "c"
+        "message.h": "c",
+        "browser.h": "c",
+        "mesh.hpp": "c",
+        "arraylist.hpp": "c",
+        "heap.h": "c",
+        "graphics.h": "c",
+        "clocale": "cpp",
+        "vector.hpp": "c"
     }
 }

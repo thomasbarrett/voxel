@@ -1,8 +1,11 @@
-#include <stdint.h>
-#include <stdlib.h>
+#include <libc/stdint.h>
+#include <libc/stdlib.h>
 #include <voxel/physics_object.h>
 #include <voxel/world.h>
+#include <voxel/browser.h>
 #include <server/message.h>
+#include <voxel/graphics.h>
+#include "voxel/Mesh.hpp"
 
 /*
  * The dim(6) is block face, in the order defined in cube.
@@ -291,4 +294,23 @@ void world_message_handler(struct world_t *self, void *message) {
     for (int i = 0; i < block_update->length; i++) {
         world_set_block(self, block_update->updates[i].x, block_update->updates[i].y, block_update->updates[i].z, block_update->updates[i].block);
     }
+}
+
+double theta = 0;
+
+
+void on_animation_frame(struct world_t *world, float dt, float aspect) {
+    
+    world_get_projection_matrix(world, aspect);
+    
+    for (int c = 0; c < world->chunk_count; c++) {
+        chunk_update_buffers(world->chunks[c]);
+        draw_buffer(world->chunks[c]->buffer, &world->projection_matrix);
+    }
+    
+    for (int p = 0; p < 5; p++) {
+        player_update_buffers(&world->players[p]);
+        draw_buffer(world->players[p].buffer, &world->projection_matrix);
+    }
+
 }

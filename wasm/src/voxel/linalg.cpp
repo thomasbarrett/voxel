@@ -4,6 +4,7 @@
  */
 #include <voxel/linalg.h>
 #include <math.h>
+#include <stdlib.h>
 
 void vec3_init(vec3_t *a, float x, float y, float z) {
     a->x = x;

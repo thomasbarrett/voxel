@@ -1,11 +1,11 @@
 #ifndef MATH_H
 #define MATH_H
 
-float sqrt(float);
-float abs(float);
-float sin(float);
-float cos(float);
-float tan(float);
-int floor(float);
+extern "C" float sqrt(float);
+extern "C" float abs(float);
+extern "C" float sin(float);
+extern "C" float cos(float);
+extern "C" float tan(float);
+extern "C" int floor(float);
 
 #endif /* MATH_H */
