@@ -84,6 +84,8 @@
         "heap.h": "c",
         "graphics.h": "c",
         "clocale": "cpp",
-        "vector.hpp": "c"
+        "vector.hpp": "c",
+        "stdlib.hpp": "c",
+        "stdint.hpp": "c"
     }
 }

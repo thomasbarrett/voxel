@@ -9,5 +9,4 @@ typedef unsigned char uint8_t;
 typedef unsigned long size_t;
 typedef uint32_t uintptr_t;
 
-#define NULL 0
 #define PAGE_SIZE (1 << 16)

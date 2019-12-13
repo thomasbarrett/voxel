@@ -2,9 +2,9 @@
  * This file contains
  * 
  */
-#include <voxel/linalg.h>
-#include <math.h>
-#include <stdlib.h>
+#include <voxel/linalg.hpp>
+#include <math.hpp>
+#include <stdlib.hpp>
 
 void vec3_init(vec3_t *a, float x, float y, float z) {
     a->x = x;

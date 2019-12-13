@@ -11,8 +11,8 @@
  * offset to the front of the heap and to ensure that two headers will.
  */
 
-#include <stdint.h>
-#include "heap.h"
+#include <libc/stdint.hpp>
+#include <libc/heap.hpp>
 
 #define ALIGNMENT 4
 

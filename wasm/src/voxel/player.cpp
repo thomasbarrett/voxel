@@ -1,90 +1,91 @@
-#include <stdlib.h>
-#include "voxel/player.h"
-#include "voxel/cube.h"
-#include "voxel/world.h"
+#include "voxel/Player.hpp"
+#include "voxel/cube.hpp"
+#include "voxel/world.hpp"
 #include "voxel/Mesh.hpp"
 
-void player_compute_vertex_buffer(player_t *self) {
+Player::Player() {
+    theta = 0;
+    phi = 0;
+    selection = nullptr; 
+    update = true;
+
+    
+    physics_object.velocity.z = 1.0;
+    mesh.setTexture(1);
     for (int v = 0; v < 24; v++) {
-        self->vertex_buffer[3 * v + 0] = 0.5 * single_positions[v][0] + 2 * self->physics_object.position.x;
-        self->vertex_buffer[3 * v + 1] = 2.0 * single_positions[v][1] + 2 * self->physics_object.position.y ;
-        self->vertex_buffer[3 * v + 2] = 0.5 * single_positions[v][2] + 2 * self->physics_object.position.z;
+        mesh.appendVertex({
+            0.5 * single_positions[v][0] + 2 * physics_object.position.x,
+            0.5 * single_positions[v][1] + 2 * physics_object.position.y,
+            1.0 * single_positions[v][2] + 2 * physics_object.position.z
+        });
+        mesh.appendNormal({
+            single_normals[v][0],
+            single_normals[v][1],
+            single_normals[v][2]
+        });
     }
-}
 
-void player_compute_index_buffer(player_t *self) {
-    for (int v = 0; v < 36; v++) {
-        self->index_buffer[v] = single_indices[v];
+    mesh.appendTextureCoord({36/64.0,  16/64.0});
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    mesh.appendTextureCoord({46/64.0,  8/64.0});
+    mesh.appendTextureCoord({36/64.0, 8/64.0});
+
+    // Back
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    mesh.appendTextureCoord({46/64.0,  8/64.0});
+    mesh.appendTextureCoord({ 56/64.0,  8/64.0});
+    mesh.appendTextureCoord({56/64.0,  16/64.0});
+
+    // Top
+    mesh.appendTextureCoord({46/64.0,  32/64.0});
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  32/64.0});
+
+    // Bottom
+    mesh.appendTextureCoord({46/64.0,  32/64.0});
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  32/64.0});
+    
+    // Right
+    mesh.appendTextureCoord({46/64.0,  32/64.0});
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  16/64.0});
+    mesh.appendTextureCoord({56/64.0,  32/64.0});
+    
+    // Left
+    mesh.appendTextureCoord({46/64.0,  32/64.0});
+    mesh.appendTextureCoord({56/64.0,  32/64.0});
+    mesh.appendTextureCoord({56/64.0,  16/64.0});
+    mesh.appendTextureCoord({46/64.0,  16/64.0});
+    
+    for (int v = 0; v < 12; v++) {
+        mesh.appendFace({
+            single_indices[3 * v],
+            single_indices[3 * v + 1],
+            single_indices[3 * v + 2]
+        });
     }
-}
 
-void player_compute_normal_buffer(player_t *self) {
-    for (int v = 0; v < 24; v++) {
-        for (int w = 0; w < 3; w++) {
-            self->normal_buffer[3 * v + w] = single_normals[v][w];
-        }
-    }
-}
+    mesh.update();
 
-void player_compute_texture_buffer(player_t *self) {
-    for (int v = 0; v < 24; v++) {
-        self->texture_buffer[2 * v + 0] = (single_texture_coords[v][0] + block_texture_index[GOLD][v / 4][0]) / 16;
-        self->texture_buffer[2 * v + 1] = (single_texture_coords[v][1] + block_texture_index[GOLD][v / 4][1]) / 16;
-    }
-}
-
-void player_set_position(player_t *player, float x, float y, float z) {
-    player->physics_object.position.x = x;
-    player->physics_object.position.y = y;
-    player->physics_object.position.z = z;
-    player->update = 1;
-}
-
-void player_init(player_t *player) {
-    player->theta = 0;
-    player->phi = 0;
-    player->selection = NULL;
-    player->vertex_buffer = (float *) malloc(sizeof(float) * 3 * 24);
-    player->index_buffer = (unsigned short *) malloc(sizeof(unsigned short) * 36);
-    player->normal_buffer = (float *) malloc(sizeof(float) * 3 * 24);
-    player->texture_buffer = (float *) malloc(sizeof(float) * 2 * 24);
-    player->update = 1;
-    player->buffer = create_buffer();
-    player_compute_vertex_buffer(player);
-    player_compute_index_buffer(player);
-    player_compute_normal_buffer(player);
-    player_compute_texture_buffer(player);
-    update_vertex_buffer(player->buffer, player->vertex_buffer, 24);
-    update_index_buffer(player->buffer, player->index_buffer, 12);
-    update_normal_buffer(player->buffer, player->normal_buffer, 24);
-    update_texture_buffer(player->buffer, player->texture_buffer, 24);
-}
-
-
-float* player_get_vertex_buffer(player_t *self) {
-    return self->vertex_buffer;
-}
-
-unsigned short * player_get_index_buffer(player_t *self) {
-    return self->index_buffer;
-}
-
-float* player_get_normal_buffer(player_t *self) {
-    return self->normal_buffer;
-}
-
-float* player_get_texture_buffer(player_t *self) {
-    return self->texture_buffer;
-}
-
-void player_update_buffers(player_t *self) {
-    if (self != NULL) {
-        if (self->update) {
-            player_compute_vertex_buffer(self);
-            update_vertex_buffer(self->buffer, self->vertex_buffer, 24);
-        }
-        self->update = 0;
-    }
     
 }
 
+void Player::setPosition(float x, float y, float z) {
+    physics_object.position.x = x;
+    physics_object.position.y = y;
+    physics_object.position.z = z;
+    update = true;
+}
+
+mat4_t Player::getModelViewMatrix() {
+    mat4_t model_view_matrix;
+    mat4_t rotation;
+    mat4_t translation;
+    mat4_rotate_y(theta, &rotation);
+    mat4_translate(physics_object.position.x, physics_object.position.y, physics_object.position.z, &translation);
+    mat4_multiply(&rotation, &translation, &model_view_matrix);
+    return model_view_matrix;
+}

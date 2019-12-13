@@ -8,8 +8,8 @@
  * \date Nov 21, 2019
  */
 
-#include <voxel/linalg.h>
-#include <libc/math.h>
+#include <voxel/linalg.hpp>
+#include <libc/math.hpp>
 
 /**
  * An axis-aligned bounding box is a three dimensional box with both a position

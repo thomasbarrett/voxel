@@ -56,12 +56,16 @@ async function load_game_source() {
                 sin: Math.sin,
                 cos: Math.cos,
                 tan: Math.tan,
+                atan2: Math.atan2,
                 get_pid: function() {
                     return window.pid;
                 },
                 floor: Math.floor,
                 print_float: function(num) {
                     console.log(num);
+                },
+                random: function() {
+                    return Math.random();
                 },
                 send: function(pointer, size) {
                     let memory_buffer = instance.exports.memory.buffer;
@@ -96,6 +100,7 @@ async function load_game_source() {
                 update_normal_buffer: graphics.updateNormalBuffer.bind(graphics),
                 update_index_buffer: graphics.updateIndexBuffer.bind(graphics),
                 update_texture_buffer: graphics.updateTextureBuffer.bind(graphics),
+                update_texture: graphics.updateTexture.bind(graphics),
                 delete_buffer: graphics.deleteBuffer.bind(graphics),
                 draw_buffer: graphics.drawBuffer.bind(graphics)
             }

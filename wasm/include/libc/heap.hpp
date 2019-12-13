@@ -1,8 +1,8 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include "stdint.h"
-#include "stdlib.h"
+#include <libc/stdint.hpp>
+#include <libc/stdlib.hpp>
 
 extern uint8_t __heap_base;
 

@@ -1,8 +1,8 @@
-#include <stdlib.h>
-
-#include <voxel/world.h>
-#include <voxel/cube.h>
-#include <voxel/perlin.h>
+#include <libc/stdlib.hpp>
+#include <voxel/world.hpp>
+#include <voxel/Chunk.hpp>
+#include <voxel/cube.hpp>
+#include <voxel/perlin.hpp>
 
 #define TRUE 1
 #define FALSE 0
@@ -16,22 +16,13 @@ float max(float a, float b) {
  * the bottom 99 blocks with stone, the 100th block with glass, and the rest with 
  * air.
  */
-struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
-    struct chunk_t *self = (struct chunk_t*) malloc(sizeof(struct chunk_t));
+Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
 
-    /*
-     * 
-     */
-    self->world = w;
-    self->chunk_x = x;
-    self->chunk_z = z;
-    self->vertex_buffer = NULL;
-    self->index_buffer = NULL;
-    self->normal_buffer = NULL;
-    self->texture_buffer = NULL;
-    self->physics_objects = NULL;
-    self->buffer = create_buffer();
-    self->update = TRUE;
+    world = w;
+    chunk_x = x;
+    chunk_z = z;
+    physics_objects = NULL;
+    update = TRUE;
 
     for (int i = 0; i < CHUNK_SIZE; i++) {
         for (int j = 0; j < CHUNK_HEIGHT; j++) {
@@ -42,13 +33,13 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
                 float noise = perlin2d(block_x , block_z, 0.05, 3);
                 int top = 10 * noise + 100;
                 if (j < top - 10) {
-                    self->blocks[i][j][k] = STONE;
+                    blocks[i][j][k] = STONE;
                 } else if (j < top - 1) {
-                    self->blocks[i][j][k] = DIRT;
+                    blocks[i][j][k] = DIRT;
                 } else if (j < top) {
-                    self->blocks[i][j][k] = GRASS;
+                    blocks[i][j][k] = GRASS;
                 } else {
-                    self->blocks[i][j][k] = AIR;
+                    blocks[i][j][k] = AIR;
                 }
             }
         }
@@ -62,9 +53,9 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
         for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
                 if (i == 0 && k == 0  && j < 6) {
-                    self->blocks[8 + i][tree_y + j][8 + k] = WOOD;
+                    blocks[8 + i][tree_y + j][8 + k] = WOOD;
                 } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    self->blocks[8 + i][tree_y + j][8 + k] = LEAVES;
+                    blocks[8 + i][tree_y + j][8 + k] = LEAVES;
                 }
             }
         }
@@ -78,53 +69,40 @@ struct chunk_t* chunk_init(struct world_t *w, int x, int z, uint32_t seed) {
         for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
                 if (i == 0 && k == 0 && j < 6) {
-                    self->blocks[12 + i][tree2_y + j][4 + k] = WOOD;
+                    blocks[12 + i][tree2_y + j][4 + k] = WOOD;
                 } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    self->blocks[12 + i][tree2_y + j][4 + k] = LEAVES;
+                    blocks[12 + i][tree2_y + j][4 + k] = LEAVES;
                 }
             }
         }
     }
 
-    return self;
 }
-
-/*
- * Returns the block at position (x, y, z) in the chunk
- */
-uint8_t chunk_get(struct chunk_t *self, int x, int y, int z) {
-    return self->blocks[x][y][z];
-}
-
-int chunk_get_block_update(struct chunk_t *self) {
-    return self->update;
-}
-
 
 /*
  * Sets the block at position (x, y, z) in the chunk to b. 
  * This has the additional side effect of marking 'update'
  * as true.
  */
-uint8_t chunk_set(struct chunk_t *self, int x, int y, int z, enum block_t b) {
-    self->update = TRUE;
+uint8_t Chunk::setBlock(int x, int y, int z, enum block_t b) {
+    update = TRUE;
     if (x == 0) {
-        struct chunk_t *l = world_get_chunk(self->world, self->chunk_x - 1, self->chunk_z);
+        Chunk *l = world_get_chunk(world, chunk_x - 1, chunk_z);
         l->update = TRUE;
 
     } else if (x == CHUNK_SIZE - 1) {
-        struct chunk_t *l = world_get_chunk(self->world, self->chunk_x + 1, self->chunk_z);
+        Chunk *l = world_get_chunk(world, chunk_x + 1, chunk_z);
         l->update = TRUE;
     }
 
     if (z == 0) {
-        struct chunk_t *l = world_get_chunk(self->world, self->chunk_x, self->chunk_z - 1);
+        Chunk *l = world_get_chunk(world, chunk_x, chunk_z - 1);
         l->update = TRUE;
     } else if (z == CHUNK_SIZE - 1) {
-        struct chunk_t *l = world_get_chunk(self->world, self->chunk_x, self->chunk_z + 1);
+        Chunk *l = world_get_chunk(world, chunk_x, chunk_z + 1);
         l->update = TRUE;
     }
-    return self->blocks[x][y][z] = b;
+    return blocks[x][y][z] = b;
 }
 
 int is_block_transparent(int block) {
@@ -138,23 +116,23 @@ int is_block_transparent(int block) {
  * 
  * The current implementation is correct and complete, but still relatively innefficient.
  */
-uint8_t chunk_is_block_visible(struct chunk_t *self, int x, int y, int z) {
+bool Chunk::isBlockVisible(int x, int y, int z) {
 
     /*
      * Air blocks are never visible, so we return FALSE in all cases.
      */
-    if (self->blocks[x][y][z] == AIR) return FALSE;
+    if (blocks[x][y][z] == AIR) return FALSE;
 
     /*
      * If any of the adjacent blocks in the blocks own chunk are air, then it
      * is possible for the block to be visible.
      */
-    if ((y != 0 && is_block_transparent(self->blocks[x][y - 1][z]))
-    ||  (y != CHUNK_HEIGHT - 1 && is_block_transparent(self->blocks[x][y + 1][z]))
-    ||  (x != 0 && is_block_transparent(self->blocks[x - 1][y][z]))
-    ||  (x != CHUNK_SIZE - 1 && is_block_transparent(self->blocks[x + 1][y][z]))
-    ||  (z != 0 && is_block_transparent(self->blocks[x][y][z - 1]))
-    ||  (z != CHUNK_SIZE - 1 && is_block_transparent(self->blocks[x][y][z + 1]))) {
+    if ((y != 0 && is_block_transparent(blocks[x][y - 1][z]))
+    ||  (y != CHUNK_HEIGHT - 1 && is_block_transparent(blocks[x][y + 1][z]))
+    ||  (x != 0 && is_block_transparent(blocks[x - 1][y][z]))
+    ||  (x != CHUNK_SIZE - 1 && is_block_transparent(blocks[x + 1][y][z]))
+    ||  (z != 0 && is_block_transparent(blocks[x][y][z - 1]))
+    ||  (z != CHUNK_SIZE - 1 && is_block_transparent(blocks[x][y][z + 1]))) {
         return TRUE;
     }
     
@@ -171,24 +149,24 @@ uint8_t chunk_is_block_visible(struct chunk_t *self, int x, int y, int z) {
      */
 
     if (x == 0) {
-        struct chunk_t *l = world_get_chunk(self->world, self->chunk_x - 1, self->chunk_z);
+        Chunk *l = world_get_chunk(world, chunk_x - 1, chunk_z);
         if (l != NULL && is_block_transparent(l->blocks[CHUNK_SIZE - 1][y][z])) {
             return TRUE;
         }
     } else if (x == CHUNK_SIZE - 1) {
-        struct chunk_t *r = world_get_chunk(self->world, self->chunk_x + 1, self->chunk_z);
+        Chunk *r = world_get_chunk(world, chunk_x + 1, chunk_z);
         if (r != NULL && is_block_transparent(r->blocks[0][y][z])) {
             return TRUE;
         }
     }
 
     if (z == 0) {
-        struct chunk_t *t = world_get_chunk(self->world, self->chunk_x, self->chunk_z - 1);
+        Chunk *t = world_get_chunk(world, chunk_x, chunk_z - 1);
         if (t != NULL && is_block_transparent(t->blocks[x][y][CHUNK_SIZE - 1])) {
             return TRUE;
         }
     } else if (z == CHUNK_SIZE - 1) {
-        struct chunk_t *b = world_get_chunk(self->world, self->chunk_x, self->chunk_z + 1);
+        Chunk *b = world_get_chunk(world, chunk_x, chunk_z + 1);
         if (b != NULL && is_block_transparent(b->blocks[x][y][0])) {
             return TRUE;
         }
@@ -200,12 +178,12 @@ uint8_t chunk_is_block_visible(struct chunk_t *self, int x, int y, int z) {
  * Returns the number of visible blocks in the chunk. This is a convenience
  * method that can be used to allocate memory for vertex buffers ahead of time.
  */
-int chunk_visible_block_count(struct chunk_t *self) {
+int Chunk::visibleBlockCount() {
     size_t i = 0;
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                uint8_t visible = chunk_is_block_visible(self, x, y, z);
+                uint8_t visible = isBlockVisible(x, y, z);
                 if (visible) i += 1;
             }
         }
@@ -214,142 +192,57 @@ int chunk_visible_block_count(struct chunk_t *self) {
 }
 
 
-float* chunk_compute_vertex_buffer(struct chunk_t *self, size_t visible_vertex_count) {
-    float *vertices = (float *) realloc(self->vertex_buffer, 3 * sizeof(float) * 24 * visible_vertex_count);
-    size_t i = 0;
+void chunk_compute_buffers(Chunk *self, size_t visible_vertex_count) {
+    int block_i = 0;
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                uint8_t visible = chunk_is_block_visible(self, x, y, z);
+                uint8_t visible = self->isBlockVisible(x, y, z);
                 if (visible) {
+
                     float block_x = x + self->chunk_x * CHUNK_SIZE;
                     float block_y = y;
                     float block_z = z + self->chunk_z * CHUNK_SIZE;
+
+                    int block = self->blocks[x][y][z];
+
                     for (int v = 0; v < 24; v++) {
-                        vertices[i + 3 * v + 0] = single_positions[v][0] + 2 * block_x;
-                        vertices[i + 3 * v + 1] = single_positions[v][1] + 2 * block_y;
-                        vertices[i + 3 * v + 2] = single_positions[v][2] + 2 * block_z;
+                        self->mesh.appendVertex({
+                            single_positions[v][0] + 2 * block_x,
+                            single_positions[v][1] + 2 * block_y,
+                            single_positions[v][2] + 2 * block_z
+                        });
+                        self->mesh.appendTextureCoord({
+                            (single_texture_coords[v][0] + block_texture_index[block][v / 4][0]) / 16,
+                            (single_texture_coords[v][1] + block_texture_index[block][v / 4][1]) / 16
+                        });
+                        self->mesh.appendNormal({
+                            single_normals[v][0],
+                            single_normals[v][1],
+                            single_normals[v][2]
+                        });
                     }
-                    i += 3 * 24;
-                }
-            }
-        }
-    }
-    return vertices;
-}
-
-float* chunk_get_vertex_buffer(struct chunk_t *self) {
-    return self->vertex_buffer;
-}
-
-unsigned short* chunk_compute_index_buffer(struct chunk_t *self, size_t visible_block_count) {
-    /* allocate an array of exactly the right size */
-    unsigned short *indices = (unsigned short *) realloc(self->index_buffer, sizeof(unsigned short) * 36 * visible_block_count);
-    size_t indices_length = 0;
-    int block_i = 0;
-    /* iterate through all blocks in chunk */
-    for (int x = 0; x < CHUNK_SIZE; x++) {
-        for (int y = 0; y < CHUNK_HEIGHT; y++) {
-            for (int z = 0; z < CHUNK_SIZE; z++) {
-
-                /* check whether or not the block is visible */
-                if (chunk_is_block_visible(self, x, y, z)) {
-                    
-                    /* add another copy of normals to array */
-                    for (int v = 0; v < 36; v++) {
-                        indices[indices_length] = single_indices[v] + block_i * 24;;
-                        indices_length++;
+                    for(int v = 0; v < 12; v++) {
+                        self->mesh.appendFace({
+                            single_indices[3 * v] + block_i * 24,
+                            single_indices[3 * v + 1] + block_i * 24,
+                            single_indices[3 * v + 2] + block_i * 24,
+                        });
                     }
                     block_i += 1;
                 }
             }
         }
     }
-    return indices;
 }
 
-unsigned short* chunk_get_index_buffer(struct chunk_t *self) {
-    return self->index_buffer;
-}
-
-/**
- * Computes the vertex normals for the chunk. 
- * \param visible_block_count the number of visible blocks in chunk
- * \return a pointer to the normal buffer
- */
-float* chunk_compute_normal_buffer(struct chunk_t *self, size_t visible_block_count) {
-    /* allocate an array of exactly the right size */
-    float *normals = (float *) realloc(self->normal_buffer, 3 * sizeof(float) * 24 * visible_block_count);
-    size_t normals_length = 0;
-
-    /* iterate through all blocks in chunk */
-    for (int x = 0; x < CHUNK_SIZE; x++) {
-        for (int y = 0; y < CHUNK_HEIGHT; y++) {
-            for (int z = 0; z < CHUNK_SIZE; z++) {
-
-                /* check whether or not the block is visible */
-                if (chunk_is_block_visible(self, x, y, z)) {
-                    
-                    /* add another copy of normals to array */
-                    for (int v = 0; v < 24; v++) {
-                        for (int w = 0; w < 3; w++) {
-                            normals[normals_length + 3 * v + w] = single_normals[v][w];
-                        }
-                    }
-
-                    normals_length += 3 * 24;
-                }
-            }
-        }
-    }
-    return normals;
-}
-
-float* chunk_get_normal_buffer(struct chunk_t *self) {
-    return self->normal_buffer;
-}
-
-
-float* chunk_compute_texture_buffer(struct chunk_t *self, size_t visible_block_count) {
-    float *texture_coords = (float *) realloc(self->texture_buffer, 2 * sizeof(float) * 24 * visible_block_count);
-    size_t i = 0;
-    for (int x = 0; x < CHUNK_SIZE; x++) {
-        for (int y = 0; y < CHUNK_HEIGHT; y++) {
-            for (int z = 0; z < CHUNK_SIZE; z++) {
-                int block = self->blocks[x][y][z];
-                uint8_t visible = chunk_is_block_visible(self, x, y, z);
-                if (visible) {
-                    float block_x = x + self->chunk_x * CHUNK_SIZE;
-                    float block_y = y;
-                    float block_z = z + self->chunk_z * CHUNK_SIZE;
-                    for (int v = 0; v < 24; v++) {
-                        texture_coords[i + 2 * v + 0] = (single_texture_coords[v][0] + block_texture_index[block][v / 4][0]) / 16;
-                        texture_coords[i + 2 * v + 1] = (single_texture_coords[v][1] + block_texture_index[block][v / 4][1]) / 16;
-                    }
-                    i += 2 * 24;
-                }
-            }
-        }
-    }
-    return texture_coords;
-}
-
-/*
- * Return the 
- */
-float* chunk_get_texture_buffer(struct chunk_t *self) {
-    return self->texture_buffer;
-}
-
-
-
-aabb3_t* chunk_compute_physics_objects(struct chunk_t *self, size_t visible_vertex_count) {
+aabb3_t* chunk_compute_physics_objects(Chunk *self, size_t visible_vertex_count) {
     aabb3_t *objects = (aabb3_t *) realloc(self->physics_objects, sizeof(aabb3_t) * visible_vertex_count);
     size_t i = 0;
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                uint8_t visible = chunk_is_block_visible(self, x, y, z);
+                uint8_t visible = self->isBlockVisible(x, y, z);
                 if (visible) {
                     float block_x = x + self->chunk_x * CHUNK_SIZE;
                     float block_y = y;
@@ -364,10 +257,6 @@ aabb3_t* chunk_compute_physics_objects(struct chunk_t *self, size_t visible_vert
     return objects;
 }
 
-aabb3_t* chunk_get_physics_objects(struct chunk_t *self) {
-    return self->physics_objects;
-}
-
 /*
  * Update the buffer fields in the given chunk.
  * This will be called at every frame, so the buffers should only actually be
@@ -375,28 +264,15 @@ aabb3_t* chunk_get_physics_objects(struct chunk_t *self) {
  * determined from the state of the update flag. This method will set the
  * update flag to false.
  */
-void chunk_update_buffers(struct chunk_t *self) {
-    if (self->update) {
-        size_t visible_block_count = chunk_visible_block_count(self);
-        self->visible_block_count = visible_block_count;
-        self->vertex_buffer = chunk_compute_vertex_buffer(self, visible_block_count);
-        self->normal_buffer = chunk_compute_normal_buffer(self, visible_block_count);
-        self->index_buffer = chunk_compute_index_buffer(self, visible_block_count);
-        self->texture_buffer = chunk_compute_texture_buffer(self, visible_block_count);
-        self->physics_objects = chunk_compute_physics_objects(self, visible_block_count);
-        update_vertex_buffer(self->buffer, self->vertex_buffer, visible_block_count * 24);
-        update_normal_buffer(self->buffer, self->normal_buffer, visible_block_count * 24);
-        update_index_buffer (self->buffer, self->index_buffer, visible_block_count * 12);
-        update_texture_buffer (self->buffer, self->texture_buffer , visible_block_count * 24);
+void Chunk::updateBuffers() {
+    if (update) {
+        size_t visible_block_count = visibleBlockCount();
+        this->visible_block_count = visible_block_count;
+        physics_objects = chunk_compute_physics_objects(this, visible_block_count);
+        mesh.clear();
+        chunk_compute_buffers(this, visible_block_count);
+        mesh.update();
 
     }
-    self->update = FALSE;
-}
-
-void chunk_apply_update(struct chunk_t *self, chunk_update_t *update) {
-    for (int i = 0; i < update->size; i++) {
-        chunk_entry_t entry = update->data[i];
-        self->blocks[entry.x][entry.y][entry.z] = entry.block;
-    }
-    self->update = 1;
+    update = FALSE;
 }

@@ -31,6 +31,7 @@ function getProgramInfo(gl) {
     attribute vec3 aVertexNormal;
     attribute vec2 aTextureCoord;
 
+    uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
 
     varying highp vec2 vTextureCoord;
@@ -38,7 +39,7 @@ function getProgramInfo(gl) {
     varying highp float vDistance;
 
     void main(void) {
-      gl_Position = uProjectionMatrix  * aVertexPosition;
+      gl_Position = uProjectionMatrix  * uModelViewMatrix * aVertexPosition;
       vTextureCoord = aTextureCoord;
 
       // Apply lighting effect
@@ -88,6 +89,7 @@ function getProgramInfo(gl) {
 
     },
     uniformLocations: {
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
     },

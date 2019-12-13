@@ -7,5 +7,6 @@ extern "C" float sin(float);
 extern "C" float cos(float);
 extern "C" float tan(float);
 extern "C" int floor(float);
+extern "C" float atan2(float, float);
 
 #endif /* MATH_H */

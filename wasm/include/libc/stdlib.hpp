@@ -1,8 +1,8 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 
-#include "libc/stdint.h"
-#include "libc/heap.h"
+#include <libc/stdint.hpp>
+#include <libc/heap.hpp>
 
 extern uint8_t __heap_base;
  

@@ -1,9 +1,10 @@
 #ifndef MESH_HPP
 #define MESH_HPP
 
+
 #include <voxel/ArrayList.hpp>
-#include <voxel/Vector.hpp>
-#include <voxel/graphics.h>
+#include <voxel/Array.hpp>
+#include <voxel/graphics.hpp>
 
 namespace voxel {
 
@@ -14,10 +15,10 @@ class Mesh {
 private:
     int buffer;
     int modified;
-    ArrayList<Vector<float, 3>> vertices;
-    ArrayList<Vector<float, 3>> normals;
-    ArrayList<Vector<float, 2>> texture_coords;
-    ArrayList<Vector<unsigned short, 3>> faces;   
+    ArrayList<Array<float, 3>> vertices;
+    ArrayList<Array<float, 3>> normals;
+    ArrayList<Array<float, 2>> texture_coords;
+    ArrayList<Array<unsigned short, 3>> faces;   
 public:
     Mesh() {
         buffer = create_buffer();
@@ -44,22 +45,26 @@ public:
         faces.clear();
     }
     
-    void appendVertex(const Vector<float, 3> &v) {
+    void appendVertex(const Array<float, 3> &v) {
         vertices.append(v);
         modified = true;
     }
 
-    void appendNormal(const Vector<float, 3> &v) {
+    void appendNormal(const Array<float, 3> &v) {
         normals.append(v);
         modified = true;
     }
 
-    void appendTextureCoord(const Vector<float, 2> &v) {
+    void setTexture(int i) {
+        update_texture(buffer, i);
+    }
+    
+    void appendTextureCoord(const Array<float, 2> &v) {
         texture_coords.append(v);
         modified = true;
     }
 
-    void appendFace(const Vector<unsigned short, 3> &f) {
+    void appendFace(const Array<unsigned short, 3> &f) {
         faces.append(f);
         modified = true;
     }
@@ -74,8 +79,8 @@ public:
         modified = false;
     }
 
-    void draw(mat4_t *projection_matrix) {
-        draw_buffer(buffer, projection_matrix);
+    void draw(mat4_t *model_view_matrix, mat4_t *projection_matrix) {
+        draw_buffer(buffer, model_view_matrix, projection_matrix);
     }
     
     ~Mesh() {

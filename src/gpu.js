@@ -5,6 +5,7 @@ class GraphicsBuffer {
         this.vertexBuffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
         this.normalBuffer = gl.createBuffer();
+        this.texture = 0;
         this.textureBuffer = gl.createBuffer();
 
     }
@@ -17,6 +18,10 @@ class GraphicsBuffer {
     updateIndexBuffer(index_data_view) {
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, index_data_view, this.gl.STATIC_DRAW);    
+    }
+
+    updateTexture(texture_index) {
+        this.texture = texture_index;
     }
 
     updateNormalBuffer(normal_data_view) {
@@ -43,8 +48,10 @@ class Graphics {
         this.gl = gl;
         this.program_info = getProgramInfo(gl)
         this.buffers = [];
-        this.texture = loadTexture(gl, './textures/blocks.png');
-
+        this.textures = [
+            loadTexture(gl, './textures/blocks.png'),
+            loadTexture(gl, './textures/mobs.png')
+        ];
     }
 
     createBuffer() {
@@ -62,6 +69,10 @@ class Graphics {
         const index_data_view = new Uint16Array(wasm_memory, faces, 3 * n_faces);
         this.buffers[index].n_faces = n_faces;
         this.buffers[index].updateIndexBuffer(index_data_view);
+    }
+
+    updateTexture(index, texture_index) {
+        this.buffers[index].texture = texture_index;
     }
 
     updateNormalBuffer(index, normals, n_normals) {
@@ -83,9 +94,10 @@ class Graphics {
         }
     }
 
-    drawBuffer(index, projection_matrix) {
+    drawBuffer(index, model_view_matrix, projection_matrix) {
         const gl = this.gl;
         const wasm_memory = instance.exports.memory.buffer;
+        const model_view_matrix_view =  new Float32Array(wasm_memory, model_view_matrix, 16);
         const projection_matrix_view =  new Float32Array(wasm_memory, projection_matrix, 16);
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers[index].vertexBuffer);
@@ -103,10 +115,11 @@ class Graphics {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers[index].indexBuffer);
         gl.useProgram(this.program_info.program);
+        gl.uniformMatrix4fv(this.program_info.uniformLocations.modelViewMatrix, false, model_view_matrix_view);
         gl.uniformMatrix4fv(this.program_info.uniformLocations.projectionMatrix, false, projection_matrix_view);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.bindTexture(gl.TEXTURE_2D, this.textures[this.buffers[index].texture]);
         gl.uniform1i(this.program_info.uniformLocations.uSampler, 0);
 
         gl.drawElements(gl.TRIANGLES, 3 * this.buffers[index].n_faces, gl.UNSIGNED_SHORT, 0)

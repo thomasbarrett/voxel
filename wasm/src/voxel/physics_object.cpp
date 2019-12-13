@@ -1,7 +1,7 @@
 
-#include <math.h>
-#include <voxel/linalg.h>
-#include <voxel/physics_object.h>
+#include <math.hpp>
+#include <voxel/linalg.hpp>
+#include <voxel/physics_object.hpp>
 
 /**
  * Return whether or not the two axis-aligned bounding boxes intersect.

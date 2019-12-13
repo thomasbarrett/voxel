@@ -1,4 +1,4 @@
-#include "voxel/cube.h"
+#include "voxel/cube.hpp"
 
 const float single_positions[24][3] = {
     

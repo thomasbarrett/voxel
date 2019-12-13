@@ -1,6 +1,5 @@
-#include <voxel/perlin.h>
-
-#include <math.h>
+#include <voxel/perlin.hpp>
+#include <libc/math.hpp>
 
 static const int  SEED = 1985;
 

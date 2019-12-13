@@ -1,7 +1,7 @@
 #ifndef CHUNK_UPDATE_H
 #define CHUNK_UPDATE_H
 
-#include <stdint.h>
+#include <libc/stdint.hpp>
 
 typedef struct chunk_entry {
     uint8_t x;
