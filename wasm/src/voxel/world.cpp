@@ -2,7 +2,7 @@
 #include <libc/stdlib.hpp>
 #include <voxel/physics_object.hpp>
 #include <voxel/world.hpp>
-#include <voxel/browser.hpp>
+#include <voxel/Browser.hpp>
 #include <server/message.hpp>
 #include <voxel/graphics.hpp>
 #include <voxel/Mesh.hpp>
@@ -91,18 +91,18 @@ void world_set_block(World *self, int x, int y, int z, int b) {
     int lx = x - chunkX * CHUNK_SIZE;
     int ly = y;
     int lz = z - chunkZ * CHUNK_SIZE;
-    chunk->setBlock(lx, ly, lz, AIR);
+    chunk->setBlock(lx, ly, lz, Block::Air);
 }
 
 void world_break_block(World *self, int x, int y, int z) {
-    world_set_block(self, x, y, z, AIR);
+    world_set_block(self, x, y, z, Block::Air);
     block_update_t data;
     data.message = BLOCK_UPDATE;
     data.pid = get_pid();
     data.x = x;
     data.y = y;
     data.z = z;
-    data.block = AIR;
+    data.block = Block::Air;
     send(&data, sizeof(data));
 }
 
@@ -149,21 +149,21 @@ int world_set_chunk(World *self, int x, int z, Chunk *chunk) {
 
 aabb3_t *world_ray_intersect(ray3_t *ray, World *self) {
     aabb3_t *min_block = NULL;
-    float min_time = 1E6;
+    IntersectionResult min = {IntersectionResult::None, 1E10f, nullptr};
     for (int i = 0; i < self->chunk_count; i++) {
         Chunk *c = self->chunks[i];
         aabb3_t* blocks = c->physics_objects;
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
-            float time = ray_intersects(ray, block);
-            if (time < min_time) {
-                min_time = time;
+            IntersectionResult res = ray_intersects(ray, block);
+            if (res.time() < min.time()) {
+                min = res;
                 min_block = block;
             }
         }
     }
     
-    if (min_time < 10) {
+    if (min.time() < 10) {
         self->player.selection = min_block;
     } else {
         self->player.selection = NULL;
@@ -366,8 +366,7 @@ void on_animation_frame(World *world, float dt, float aspect) {
     */
 
     for (int p = 0; p < MOB_COUNT; p++) {
-        mat4_t model_view_matrix = world->mobs[p].getModelViewMatrix();
-        world->mobs[p].mesh.draw(&model_view_matrix, &world->projection_matrix);
+        world->mobs[p].draw(&world->projection_matrix);
     }
 
 }

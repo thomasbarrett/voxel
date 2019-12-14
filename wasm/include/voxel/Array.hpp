@@ -23,7 +23,7 @@ public:
      * Constructs an array with the given elements.
      * \param E... Es: the elements to put in the array
      */
-    template <typename... E> Array(E... Es) : buffer_{static_cast<T>(Es)...} {}
+    template <typename... E> constexpr Array(E... Es) : buffer_{static_cast<T>(Es)...} {}
 
     /**
      * Returns a reference to the element at index i

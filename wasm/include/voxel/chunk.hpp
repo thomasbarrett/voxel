@@ -8,18 +8,28 @@
 #define CHUNK_SIZE 16
 #define CHUNK_HEIGHT 256
 
-enum block_t { 
-    AIR = 0x0, 
-    STONE, GRASS, DIRT, COBBLE_STONE, WOODEN_PLANKS,
-    GOLD, IRON, COAL, WOOD, LEAVES
-};
-
 extern int block_texture_index[][6][2];
+
+class Block {
+public:
+    enum Value: uint8_t { 
+        Air, Stone, Grass, Dirt, CobbleStone, WoodenPlanks,
+        Gold, Iron, Coal, Wood, Leaves
+    };
+
+    Block() = default;
+    constexpr Block(Value v): value_{v} {};
+    constexpr bool operator==(Block b) const { return value_ == b.value_; }
+    constexpr bool operator!=(Block b) const { return value_ != b.value_; }\
+    explicit operator int() { return value_; }
+private:
+    Value value_;
+};
 
 struct Chunk {
 public:
     struct World *world;
-    uint8_t blocks[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
+    Block blocks[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
     int32_t chunk_x;
     int32_t chunk_z;
     aabb3_t *physics_objects;
@@ -29,7 +39,7 @@ public:
 public:
     Chunk(struct World *w, int x, int z, uint32_t seed);
     void updateBuffers();
-    uint8_t setBlock(int x, int y, int z, enum block_t b);
+    Block setBlock(int x, int y, int z, Block b);
     bool isBlockVisible(int x, int y, int z);
     int visibleBlockCount();
 };

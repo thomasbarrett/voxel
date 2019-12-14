@@ -50,6 +50,29 @@ typedef struct ray3 {
     vec3_t direction;
 } ray3_t;
 
+struct IntersectionResult {
+public:
+    enum Value: int { 
+        None, Top, Bottom, Left, Right, Front, Back,
+    };
+
+    IntersectionResult() = default;
+    constexpr IntersectionResult(Value v, float t, aabb3_t *b): value_{v}, time_{t}, block_{b} {};
+    constexpr bool operator==(IntersectionResult b) const { return value_ == b.value_; }
+    constexpr bool operator!=(IntersectionResult b) const { return value_ != b.value_; }
+    explicit operator int() { return value_; }
+    float time() const {
+        return time_;
+    }
+    aabb3_t* block() {
+        return block_;
+    }
+private:
+    Value value_;
+    aabb3_t *block_;
+    float time_;
+};
+
 /**
  * Returns 1 if the two aabb3_t objects are intersecting and 0 if not.
  * This function is used during collision detection. However, another
@@ -115,6 +138,6 @@ int aabb3_resolve_collision(const aabb3_t *a, dyn_aabb3_t *b);
  * \param ray: The ray being traced.
  * \param obj: The physics object being tested.
  */
-float ray_intersects(const ray3_t *ray, const aabb3_t *obj);
+IntersectionResult ray_intersects(const ray3_t *ray, aabb3_t *obj);
 
 #endif /* PHYSICS_OBJECT_H */

@@ -132,8 +132,10 @@ function initBuffers(gl) {
     -1.0,  1.0,  1.0,
     -1.0,  1.0, -1.0,
   ];
+
+  positions = positions.map(x => x / 4);
   for (let i = 0; i < 24; i++) {
-    positions[3 * i + 2] -= 8;
+    positions[3 * i + 2] -= 4;
   }
   // Now pass the list of positions into WebGL to build the
   // shape. We do this by creating a Float32Array from the
@@ -145,12 +147,12 @@ function initBuffers(gl) {
   // for each face.
 
   const faceColors = [
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
+    [1.0,  0.0,  0.0,  1.0],    // Front face: white
   ];
 
   // Convert the array of colors into a table for all the vertices.
@@ -312,7 +314,7 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
     const vertexCount = 36;
     const type = gl.UNSIGNED_SHORT;
     const offset = 0;
-    gl.drawElements(gl.LINE_STRIP, vertexCount, type, offset);
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
 
   // Update the rotation for the next draw

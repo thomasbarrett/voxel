@@ -86,6 +86,7 @@
         "clocale": "cpp",
         "vector.hpp": "c",
         "stdlib.hpp": "c",
-        "stdint.hpp": "c"
+        "stdint.hpp": "c",
+        "__memory": "cpp"
     }
 }

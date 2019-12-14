@@ -65,6 +65,8 @@ void vec3_normalize(vec3_t *a) {
 void mat4_rotate_x(float theta, mat4_t *mat) {
     float ctheta = cos(theta);
     float stheta = sin(theta);
+
+
     mat->entries[0][0] = 1.0;
     mat->entries[1][0] = 0.0;
     mat->entries[2][0] = 0.0;

@@ -2,7 +2,7 @@
 #include <voxel/world.hpp>
 #include <voxel/Chunk.hpp>
 #include <voxel/cube.hpp>
-#include <voxel/perlin.hpp>
+#include <voxel/Perlin.hpp>
 
 #define TRUE 1
 #define FALSE 0
@@ -33,13 +33,13 @@ Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
                 float noise = perlin2d(block_x , block_z, 0.05, 3);
                 int top = 10 * noise + 100;
                 if (j < top - 10) {
-                    blocks[i][j][k] = STONE;
+                    blocks[i][j][k] = Block::Stone;
                 } else if (j < top - 1) {
-                    blocks[i][j][k] = DIRT;
+                    blocks[i][j][k] = Block::Dirt;
                 } else if (j < top) {
-                    blocks[i][j][k] = GRASS;
+                    blocks[i][j][k] = Block::Grass;
                 } else {
-                    blocks[i][j][k] = AIR;
+                    blocks[i][j][k] = Block::Air;
                 }
             }
         }
@@ -53,9 +53,9 @@ Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
         for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
                 if (i == 0 && k == 0  && j < 6) {
-                    blocks[8 + i][tree_y + j][8 + k] = WOOD;
+                    blocks[8 + i][tree_y + j][8 + k] = Block::Wood;
                 } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    blocks[8 + i][tree_y + j][8 + k] = LEAVES;
+                    blocks[8 + i][tree_y + j][8 + k] = Block::Leaves;
                 }
             }
         }
@@ -69,9 +69,9 @@ Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
         for (int j = 0; j < 10; j++) {
             for (int k = -2; k <= 2; k++) {
                 if (i == 0 && k == 0 && j < 6) {
-                    blocks[12 + i][tree2_y + j][4 + k] = WOOD;
+                    blocks[12 + i][tree2_y + j][4 + k] = Block::Block::Wood;
                 } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    blocks[12 + i][tree2_y + j][4 + k] = LEAVES;
+                    blocks[12 + i][tree2_y + j][4 + k] = Block::Block::Leaves;
                 }
             }
         }
@@ -84,7 +84,7 @@ Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
  * This has the additional side effect of marking 'update'
  * as true.
  */
-uint8_t Chunk::setBlock(int x, int y, int z, enum block_t b) {
+Block Chunk::setBlock(int x, int y, int z, Block b) {
     update = TRUE;
     if (x == 0) {
         Chunk *l = world_get_chunk(world, chunk_x - 1, chunk_z);
@@ -105,8 +105,9 @@ uint8_t Chunk::setBlock(int x, int y, int z, enum block_t b) {
     return blocks[x][y][z] = b;
 }
 
-int is_block_transparent(int block) {
-    return block == AIR || block == LEAVES;
+int is_block_transparent(Block block) {
+    return block == Block::Air
+        || block == Block::Block::Leaves;
 }
 
 /*
@@ -121,7 +122,7 @@ bool Chunk::isBlockVisible(int x, int y, int z) {
     /*
      * Air blocks are never visible, so we return FALSE in all cases.
      */
-    if (blocks[x][y][z] == AIR) return FALSE;
+    if (blocks[x][y][z] == Block::Air) return FALSE;
 
     /*
      * If any of the adjacent blocks in the blocks own chunk are air, then it
@@ -204,7 +205,7 @@ void chunk_compute_buffers(Chunk *self, size_t visible_vertex_count) {
                     float block_y = y;
                     float block_z = z + self->chunk_z * CHUNK_SIZE;
 
-                    int block = self->blocks[x][y][z];
+                    Block block = self->blocks[x][y][z];
 
                     for (int v = 0; v < 24; v++) {
                         self->mesh.appendVertex({
@@ -213,8 +214,8 @@ void chunk_compute_buffers(Chunk *self, size_t visible_vertex_count) {
                             single_positions[v][2] + 2 * block_z
                         });
                         self->mesh.appendTextureCoord({
-                            (single_texture_coords[v][0] + block_texture_index[block][v / 4][0]) / 16,
-                            (single_texture_coords[v][1] + block_texture_index[block][v / 4][1]) / 16
+                            (single_texture_coords[v][0] + block_texture_index[(int) block][v / 4][0]) / 16,
+                            (single_texture_coords[v][1] + block_texture_index[(int) block][v / 4][1]) / 16
                         });
                         self->mesh.appendNormal({
                             single_normals[v][0],

@@ -11,6 +11,7 @@
 #include <voxel/physics_object.hpp>
 #include <voxel/Mesh.hpp>
 #include <voxel/Array.hpp>
+#include <voxel/Matrix.hpp>
 
 /**
  * A data structure containing all information about a player.
@@ -34,7 +35,22 @@ public:
 public:
     Player();
     void setPosition(float x, float y, float z);
-    mat4_t getModelViewMatrix();
+    void draw(mat4_t *projection_matrix) {
+        voxel::Matrix model_view_matrix = getModelViewMatrix();
+        voxel::Matrix matrix = (voxel::Matrix::Translate({0, 0.5, 0}) * model_view_matrix).tranpose();
+        mesh.draw((mat4_t*) &matrix, projection_matrix);
+        voxel::Matrix matrix2 = (voxel::Matrix::Scale({1, 0.8, 0.4}) * voxel::Matrix::Translate({-1, 1, 0}) * voxel::Matrix::RotateY(1.570795) * model_view_matrix).tranpose();
+        mesh.draw((mat4_t*) &matrix2, projection_matrix);
+        voxel::Matrix matrix3 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, 0, 0.75}) * model_view_matrix).tranpose();;
+        mesh.draw((mat4_t*) &matrix3, projection_matrix);
+        voxel::Matrix matrix4 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, 0, 0.75}) * model_view_matrix).tranpose();;
+        mesh.draw((mat4_t*) &matrix4, projection_matrix);
+        voxel::Matrix matrix5 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, 0, -0.75}) * model_view_matrix).tranpose();;
+        mesh.draw((mat4_t*) &matrix5, projection_matrix);
+        voxel::Matrix matrix6 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, 0, -0.75}) * model_view_matrix).tranpose();;
+        mesh.draw((mat4_t*) &matrix6, projection_matrix);
+    }
+    voxel::Matrix getModelViewMatrix();
 };
 
 #endif /* PLAYER_H */

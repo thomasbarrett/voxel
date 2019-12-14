@@ -1,4 +1,4 @@
-#include <voxel/perlin.hpp>
+#include <voxel/Perlin.hpp>
 #include <libc/math.hpp>
 
 static const int  SEED = 1985;

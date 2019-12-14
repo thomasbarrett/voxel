@@ -77,7 +77,7 @@ int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
 /**
  * Return 
  */
-float ray_intersects(const ray3_t *ray, const aabb3_t *obj) {
+IntersectionResult ray_intersects(const ray3_t *ray, aabb3_t *obj) {
     aabb3_t rel = *obj;
     vec3_sub(&obj->position, &ray->position, &rel.position);
    
@@ -91,43 +91,43 @@ float ray_intersects(const ray3_t *ray, const aabb3_t *obj) {
     vec3_div(&sides_pos, &ray->direction, &time_pos);
     vec3_div(&sides_neg, &ray->direction, &time_neg);
 
-    float time_min = 1E10f;
+    IntersectionResult res { IntersectionResult::None, 1E10f,  nullptr};
 
     vec3_t right;
     vec3_scale(&ray->direction, time_pos.x, &right);
-    if (aabb3_contains(&rel, &right) && time_pos.x > 0 && time_pos.x < time_min) {
-        time_min = time_pos.x;
+    if (aabb3_contains(&rel, &right) && time_pos.x > 0 && time_pos.x < res.time()) {
+        res = IntersectionResult{ IntersectionResult::Right, time_pos.x, obj};
     }
 
     vec3_t top;
     vec3_scale(&ray->direction, time_pos.y, &top);
-    if (aabb3_contains(&rel, &top) && time_pos.y > 0 && time_pos.y < time_min) {
-        time_min = time_pos.y;
+    if (aabb3_contains(&rel, &top) && time_pos.y > 0 && time_pos.y < res.time()) {
+        res = { IntersectionResult::Top, time_pos.y, obj};
     }
 
     vec3_t back;
     vec3_scale(&ray->direction, time_pos.z, &back);
-    if (aabb3_contains(&rel, &back) && time_pos.z > 0 && time_pos.z < time_min) {
-        time_min = time_pos.z;
+    if (aabb3_contains(&rel, &back) && time_pos.z > 0 && time_pos.z < res.time()) {
+        res = { IntersectionResult::Back, time_pos.z, obj};
     }
 
     vec3_t left;
     vec3_scale(&ray->direction, time_neg.x, &left);
-    if (aabb3_contains(&rel, &left) && time_neg.x > 0 && time_neg.x < time_min) {
-        time_min = time_neg.x;
+    if (aabb3_contains(&rel, &left) && time_neg.x > 0 && time_neg.x < res.time()) {
+        res = { IntersectionResult::Left, time_neg.x, obj};
     }
 
     vec3_t bottom;
     vec3_scale(&ray->direction, time_neg.y, &bottom);
-    if (aabb3_contains(&rel, &bottom) && time_neg.y > 0 && time_neg.y < time_min) {
-        time_min = time_neg.y;
+    if (aabb3_contains(&rel, &bottom) && time_neg.y > 0 && time_neg.y < res.time()) {
+        res = { IntersectionResult::Bottom, time_neg.y, obj};
     }
 
     vec3_t front;
     vec3_scale(&ray->direction, time_neg.z, &front);
-    if (aabb3_contains(&rel, &front) && time_neg.z > 0&& time_neg.z < time_min) {
-        time_min = time_neg.z;
+    if (aabb3_contains(&rel, &front) && time_neg.z > 0&& time_neg.z < res.time()) {
+        res = { IntersectionResult::Front, time_neg.z, obj};
     }
 
-    return time_min;
+    return res;
 }

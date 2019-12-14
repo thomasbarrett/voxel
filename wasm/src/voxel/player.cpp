@@ -80,12 +80,11 @@ void Player::setPosition(float x, float y, float z) {
     update = true;
 }
 
-mat4_t Player::getModelViewMatrix() {
-    mat4_t model_view_matrix;
-    mat4_t rotation;
-    mat4_t translation;
-    mat4_rotate_y(theta, &rotation);
-    mat4_translate(physics_object.position.x, physics_object.position.y, physics_object.position.z, &translation);
-    mat4_multiply(&rotation, &translation, &model_view_matrix);
-    return model_view_matrix;
+voxel::Matrix Player::getModelViewMatrix() {
+    voxel::Matrix matrix = voxel::Matrix::RotateY(theta) * voxel::Matrix::Translate({
+        physics_object.position.x,
+        physics_object.position.y,
+        physics_object.position.z
+    }); 
+    return matrix;
 }
