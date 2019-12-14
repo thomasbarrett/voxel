@@ -222,13 +222,13 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
             };
         }
     }
-    if (abs(mob->position.x - p->target[0]) > 0.5) {
+    if (abs(mob->position.x - p->target[0]) > 3) {
         mob->velocity.x = (p->target[0] - mob->position.x);
     } 
 
-    if (abs(mob->position.z - p->target[1]) > 0.5) {
+    if (abs(mob->position.z - p->target[1]) > 3) {
         mob->velocity.z = (p->target[1] - mob->position.z);
-    }
+    } 
 
     float mag = sqrt(mob->velocity.x * mob->velocity.x + mob->velocity.z * mob->velocity.z);
     if (abs(mag) > 1) {
@@ -256,28 +256,33 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
     mat4_rotate_y(3.14159 / 2, &rotate_y); 
     mat4_vec3_multiply(&rotate_y, &velocity, &velocity_left);
 
-
+    self->player.physics_object.velocity.x /= (5 + dt * 5) / 5;
+    self->player.physics_object.velocity.z /= (5 + dt * 5) / 5;
     if (f) {
-        self->player.physics_object.position.x -= dt * velocity.x;
-        self->player.physics_object.position.z -= dt * velocity.z;
+        self->player.physics_object.velocity.x = -velocity.x;
+        self->player.physics_object.velocity.z = -velocity.z;
     }
     
     if (b) {
-        self->player.physics_object.position.x += dt * velocity.x;
-        self->player.physics_object.position.z += dt * velocity.z;
+        self->player.physics_object.velocity.x = velocity.x;
+        self->player.physics_object.velocity.z = velocity.z;
     }
     
     if (l) {
-        self->player.physics_object.position.x -= dt * velocity_left.x;
-        self->player.physics_object.position.z -= dt * velocity_left.z;
+        self->player.physics_object.velocity.x = -velocity_left.x;
+        self->player.physics_object.velocity.z = -velocity_left.z;
     }
     
     if (r) {
-        self->player.physics_object.position.x += dt * velocity_left.x;
-        self->player.physics_object.position.z += dt * velocity_left.z;
+        self->player.physics_object.velocity.x = velocity_left.x;
+        self->player.physics_object.velocity.z = velocity_left.z;
     }
     
+    self->player.physics_object.position.x += dt * self->player.physics_object.velocity.x;
     self->player.physics_object.position.y += dt * self->player.physics_object.velocity.y;
+    self->player.physics_object.position.z += dt * self->player.physics_object.velocity.z;
+
+    self->player.physics_object.velocity.y += dt * self->player.physics_object.velocity.y;
 
     int bottom = 0;
     for (int i = 0; i < self->chunk_count; i++) {
@@ -302,13 +307,15 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
     }
 
     for (int i = 0; i < MOB_COUNT; i++) {
-        world_physics_update(self, &self->mobs[i], &self->mobs[i].physics_object, dt);
          
         if (aabb3_intersects((aabb3_t *) &self->mobs[i].physics_object, (aabb3_t *) &self->player.physics_object)) {
-            self->player.physics_object.velocity.x = max(self->mobs[i].physics_object.velocity.x,  self->player.physics_object.velocity.x);
+            self->player.physics_object.velocity.x = max(abs(self->mobs[i].physics_object.velocity.x),  abs(self->player.physics_object.velocity.x));
             self->player.physics_object.velocity.y = 5;
-            self->player.physics_object.velocity.z = max(self->mobs[i].physics_object.velocity.z,  self->player.physics_object.velocity.z);
+            self->player.physics_object.velocity.z = max(abs(self->mobs[i].physics_object.velocity.z),  abs(self->player.physics_object.velocity.z));
         }
+        
+        world_physics_update(self, &self->mobs[i], &self->mobs[i].physics_object, dt);
+
     }
 
     for (int p = 0; p < self->items.size(); p++) {
