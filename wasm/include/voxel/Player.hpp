@@ -12,6 +12,8 @@
 #include <voxel/Mesh.hpp>
 #include <voxel/Array.hpp>
 #include <voxel/Matrix.hpp>
+#include <voxel/Clickable.hpp>
+#include <voxel/Browser.hpp>
 
 /**
  * A data structure containing all information about a player.
@@ -23,14 +25,17 @@
  * a theta and phi field representing the players orientation in the
  * world. 
  */
-class Player {
+class Player: public Clickable {
 public:
     dyn_aabb3_t physics_object;
     aabb3_t *selection;
     float theta;
     float phi;
+    float velocity = 1;
     voxel::Mesh mesh;
     voxel::Array<float, 2> target;
+    bool angry = false;
+    class Player * angry_target = nullptr;
     bool update;
 public:
     Player();
@@ -51,6 +56,14 @@ public:
         mesh.draw((mat4_t*) &matrix6, projection_matrix);
     }
     voxel::Matrix getModelViewMatrix();
+    aabb3_t* physicsObject() {
+        return (aabb3_t*) &physics_object;
+    }
+    void triggerAction(Player *p) {
+        velocity = 8.0 + 2 * random() - 1;
+        angry_target = p;
+        angry = true;
+    }
 };
 
 #endif /* PLAYER_H */

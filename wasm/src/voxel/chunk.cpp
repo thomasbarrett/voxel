@@ -195,9 +195,57 @@ int Chunk::visibleBlockCount() {
 
 void chunk_compute_buffers(Chunk *self, size_t visible_vertex_count) {
     int block_i = 0;
+
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
+                if (is_block_transparent(self->blocks[x][y][z])) {
+                    continue;
+                }
+                uint8_t visible = self->isBlockVisible(x, y, z);
+                if (visible) {
+
+                    float block_x = x + self->chunk_x * CHUNK_SIZE;
+                    float block_y = y;
+                    float block_z = z + self->chunk_z * CHUNK_SIZE;
+
+                    Block block = self->blocks[x][y][z];
+
+                    for (int v = 0; v < 24; v++) {
+                        self->mesh.appendVertex({
+                            single_positions[v][0] + 2 * block_x,
+                            single_positions[v][1] + 2 * block_y,
+                            single_positions[v][2] + 2 * block_z
+                        });
+                        self->mesh.appendTextureCoord({
+                            (single_texture_coords[v][0] + block_texture_index[(int) block][v / 4][0]) / 16,
+                            (single_texture_coords[v][1] + block_texture_index[(int) block][v / 4][1]) / 16
+                        });
+                        self->mesh.appendNormal({
+                            single_normals[v][0],
+                            single_normals[v][1],
+                            single_normals[v][2]
+                        });
+                    }
+                    for(int v = 0; v < 12; v++) {
+                        self->mesh.appendFace({
+                            single_indices[3 * v] + block_i * 24,
+                            single_indices[3 * v + 1] + block_i * 24,
+                            single_indices[3 * v + 2] + block_i * 24,
+                        });
+                    }
+                    block_i += 1;
+                }
+            }
+        }
+    }
+
+    for (int x = 0; x < CHUNK_SIZE; x++) {
+        for (int y = 0; y < CHUNK_HEIGHT; y++) {
+            for (int z = 0; z < CHUNK_SIZE; z++) {
+                if (!is_block_transparent(self->blocks[x][y][z])) {
+                    continue;
+                }
                 uint8_t visible = self->isBlockVisible(x, y, z);
                 if (visible) {
 
@@ -273,7 +321,6 @@ void Chunk::updateBuffers() {
         mesh.clear();
         chunk_compute_buffers(this, visible_block_count);
         mesh.update();
-
     }
     update = FALSE;
 }

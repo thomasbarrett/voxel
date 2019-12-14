@@ -60,16 +60,27 @@ int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
 
     if (abs(x) < abs(y) && abs(x) < abs(z)) {
         player->position.x += x;
+        if (x > 0) {
+            return 1 << 2;
+        } else {
+            return 1 << 3;
+        }
     }
     if (abs(y) < abs(x) && abs(y) < abs(z)) {
         player->position.y += y;
         if (y > 0) {
-            player->velocity.y = 0;
-            return 1;
+            return 1 << 0;
+        } else {
+            return 1 << 1;
         }
     }
     if (abs(z) < abs(y) && abs(z) < abs(x)) {
         player->position.z += z;
+        if (z > 0) {
+            return 1 << 4;
+        } else {
+            return 1 << 5;
+        }
     }
     return 0;
 }

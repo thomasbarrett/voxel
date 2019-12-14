@@ -6,6 +6,7 @@
 #include <server/message.hpp>
 #include <voxel/graphics.hpp>
 #include <voxel/Mesh.hpp>
+#include <voxel/Item.hpp>
 
 /*
  * The dim(6) is block face, in the order defined in cube.
@@ -52,7 +53,7 @@ World::World() {
 
     // Initialize MOB_COUNT pigs in a random location
     for (int i = 0; i < MOB_COUNT; i++) {
-        vec3_init(&mobs[i].physics_object.position, (2 * random() - 1) * 50 , 220, (2 * random() - 1) * 50);
+        vec3_init(&mobs[i].physics_object.position, (2 * random() - 1) * 50, 220, (2 * random() - 1) * 50);
         vec3_init(&mobs[i].physics_object.size,  0.5, 0.5, 1.0);
     }
 }
@@ -84,18 +85,20 @@ Chunk* world_get_chunk(World *self, int x, int z) {
     return NULL;
 }
 
-void world_set_block(World *self, int x, int y, int z, int b) {
+Block world_set_block(World *self, int x, int y, int z, Block b) {
     int chunkX = floor((float) x / CHUNK_SIZE);
     int chunkZ = floor((float) z / CHUNK_SIZE);
     Chunk *chunk = world_get_chunk(self, chunkX, chunkZ);
     int lx = x - chunkX * CHUNK_SIZE;
     int ly = y;
     int lz = z - chunkZ * CHUNK_SIZE;
+    Block old = chunk->blocks[lx][ly][lz];
     chunk->setBlock(lx, ly, lz, Block::Air);
+    return old;
 }
 
 void world_break_block(World *self, int x, int y, int z) {
-    world_set_block(self, x, y, z, Block::Air);
+    Block b = world_set_block(self, x, y, z, Block::Air);
     block_update_t data;
     data.message = BLOCK_UPDATE;
     data.pid = get_pid();
@@ -103,6 +106,10 @@ void world_break_block(World *self, int x, int y, int z) {
     data.y = y;
     data.z = z;
     data.block = Block::Air;
+    self->items.append(new Item{b, {2 * x, 2 * y, 2 * z}});
+    for (int i = 0; i < MOB_COUNT; i++) {
+        self->mobs[i].triggerAction(&self->player);
+    }
     send(&data, sizeof(data));
 }
 
@@ -173,9 +180,12 @@ aabb3_t *world_ray_intersect(ray3_t *ray, World *self) {
 }
 
 void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
+  
+
     mob->position.x += dt * mob->velocity.x;
     mob->position.y += dt * mob->velocity.y;
     mob->position.z += dt * mob->velocity.z;
+
 
     int bottom = 0;
     for (int i = 0; i < self->chunk_count; i++) {
@@ -184,24 +194,34 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
             if (aabb3_intersects(block, (aabb3_t *) mob)) {
-                bottom = bottom || aabb3_resolve_collision(block, mob);
+                bottom = bottom | aabb3_resolve_collision(block, mob);
             }
         }
     }
 
-    if (!bottom) {
+    if (!(bottom & 0x1)) {
       mob->velocity.y -= dt * 20;
     } else if (mob->velocity.y < 0) {
       mob->velocity.y = 0.0;
     }
 
-    if (random() < 0.005) {
-        p->target = {
-            mob->position.x + random() * 20 - 10,
-            mob->position.z + random() * 20 - 10,
-        };
+    if ((bottom & ~0x1) && (bottom & 0x1)) {
+        p->physics_object.velocity.y = 12;
     }
 
+    if (p->angry) {
+        p->target = {
+            p->angry_target->physics_object.position.x,
+            p->angry_target->physics_object.position.z,
+        };
+    } else {
+        if (random() < 0.005) {
+            p->target = {
+                mob->position.x + random() * 20 - 10,
+                mob->position.z + random() * 20 - 10,
+            };
+        }
+    }
     if (abs(mob->position.x - p->target[0]) > 0.5) {
         mob->velocity.x = (p->target[0] - mob->position.x);
     } else {
@@ -218,11 +238,10 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
     if (abs(mag) > 1) {
         mob->velocity.x /= mag;
         mob->velocity.z /= mag;
+        mob->velocity.x *= p->velocity;
+        mob->velocity.z *= p->velocity;
         p->theta = atan2(mob->velocity.x, mob->velocity.z);
     }
-   
-
-
 }
 
 int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
@@ -270,17 +289,17 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
         aabb3_t* blocks = c->physics_objects;
         for (int j = 0; j < c->visible_block_count; j++) {
             aabb3_t *block = &blocks[j];
-            if (aabb3_intersects(block, (aabb3_t *) &self->player)) {
-                bottom = bottom || aabb3_resolve_collision(block, &self->player.physics_object);
+            if (aabb3_intersects(block, (aabb3_t *) &self->player.physics_object)) {
+                bottom = bottom | aabb3_resolve_collision(block, &self->player.physics_object);
             }
         }
     }
 
-    if (u && bottom) {
+    if (u && (bottom & 1)) {
         self->player.physics_object.velocity.y = 12;
     }
 
-    if (!bottom) {
+    if (!(bottom & 1)) {
       self->player.physics_object.velocity.y -= dt * 20;
     } else if (self->player.physics_object.velocity.y < 0) {
       self->player.physics_object.velocity.y = 0.0;
@@ -288,6 +307,41 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
 
     for (int i = 0; i < MOB_COUNT; i++) {
         world_physics_update(self, &self->mobs[i], &self->mobs[i].physics_object, dt);
+    }
+
+    for (int p = 0; p < self->items.size(); p++) {
+        if (self->items[p] == nullptr) {
+            continue;
+        }
+
+        dyn_aabb3_t *item = &self->items[p]->physics_object;
+        item->position.x += dt * item->velocity.x;
+        item->position.y += dt * item->velocity.y;
+        item->position.z += dt * item->velocity.z;
+
+        if (aabb3_intersects((aabb3_t *) &self->items[p]->physics_object, (aabb3_t *) &self->player.physics_object)) {
+            delete self->items[p];
+            self->items[p] = nullptr;
+        }
+
+        int bottom = 0;
+        for (int i = 0; i < self->chunk_count; i++) {
+            Chunk *c = self->chunks[i];
+            aabb3_t* blocks = c->physics_objects;
+            for (int j = 0; j < c->visible_block_count; j++) {
+                aabb3_t *block = &blocks[j];
+                if (aabb3_intersects(block, (aabb3_t *) item)) {
+                    bottom = bottom | aabb3_resolve_collision(block, item);
+                }
+            }
+        }
+
+        if (!(bottom&1)) {
+            item->velocity.y -= dt * 20;
+        } else if (item->velocity.y < 0) {
+            item->velocity.y = 0.0;
+        }
+
     }
 
     position_update_t data;
@@ -321,6 +375,7 @@ void world_click_handler(World *self) {
         int y = self->player.selection->position.y / 2;
         int z = self->player.selection->position.z / 2;
         world_break_block(self, x, y, z);
+  
     }
 }
 
@@ -339,7 +394,7 @@ void world_message_handler(World *self, void *message) {
     }
     block_updates_t *block_update = &bulk->block_updates;
     for (int i = 0; i < block_update->length; i++) {
-        world_set_block(self, block_update->updates[i].x, block_update->updates[i].y, block_update->updates[i].z, block_update->updates[i].block);
+       // world_set_block(self, block_update->updates[i].x, block_update->updates[i].y, block_update->updates[i].z, block_update->updates[i].block);
     }
 }
 
@@ -367,6 +422,11 @@ void on_animation_frame(World *world, float dt, float aspect) {
 
     for (int p = 0; p < MOB_COUNT; p++) {
         world->mobs[p].draw(&world->projection_matrix);
+    }
+
+
+    for (int p = 0; p < world->items.size(); p++) {
+        world->items[p]->draw(&world->projection_matrix);
     }
 
 }

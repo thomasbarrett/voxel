@@ -4,6 +4,7 @@
 #include <voxel/physics_object.hpp>
 #include <voxel/Player.hpp>
 #include <voxel/Chunk.hpp>
+#include <voxel/Item.hpp>
 
 #define CHUNK_CAPACITY 1024
 #define VISIBLE_CHUNK_RADIUS 2
@@ -23,6 +24,7 @@ public:
     Chunk* chunks[CHUNK_CAPACITY];
     Player players[PLAYER_COUNT];
     Player mobs[MOB_COUNT];
+    voxel::ArrayList<Item*> items;
 public:
     World();
 };
