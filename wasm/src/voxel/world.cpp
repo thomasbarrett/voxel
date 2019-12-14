@@ -224,14 +224,10 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
     }
     if (abs(mob->position.x - p->target[0]) > 0.5) {
         mob->velocity.x = (p->target[0] - mob->position.x);
-    } else {
-        mob->velocity.x = 0;
-    }
+    } 
 
     if (abs(mob->position.z - p->target[1]) > 0.5) {
         mob->velocity.z = (p->target[1] - mob->position.z);
-    } else {
-        mob->velocity.z = 0;
     }
 
     float mag = sqrt(mob->velocity.x * mob->velocity.x + mob->velocity.z * mob->velocity.z);
@@ -307,6 +303,12 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
 
     for (int i = 0; i < MOB_COUNT; i++) {
         world_physics_update(self, &self->mobs[i], &self->mobs[i].physics_object, dt);
+         
+        if (aabb3_intersects((aabb3_t *) &self->mobs[i].physics_object, (aabb3_t *) &self->player.physics_object)) {
+            self->player.physics_object.velocity.x = max(self->mobs[i].physics_object.velocity.x,  self->player.physics_object.velocity.x);
+            self->player.physics_object.velocity.y = 5;
+            self->player.physics_object.velocity.z = max(self->mobs[i].physics_object.velocity.z,  self->player.physics_object.velocity.z);
+        }
     }
 
     for (int p = 0; p < self->items.size(); p++) {

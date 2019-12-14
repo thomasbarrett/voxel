@@ -8,6 +8,7 @@
 #define CHUNK_SIZE 16
 #define CHUNK_HEIGHT 256
 
+float max(float a, float b);
 extern int block_texture_index[][6][2];
 
 class Block {

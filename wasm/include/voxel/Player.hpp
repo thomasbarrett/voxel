@@ -60,7 +60,7 @@ public:
         return (aabb3_t*) &physics_object;
     }
     void triggerAction(Player *p) {
-        velocity = 8.0 + 2 * random() - 1;
+        velocity = 4.0 + 2 * random() - 1;
         angry_target = p;
         angry = true;
     }

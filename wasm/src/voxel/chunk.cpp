@@ -45,37 +45,26 @@ Chunk::Chunk(struct World *w, int x, int z, uint32_t seed) {
         }
     }
 
-    float tree_x = 8 + x * CHUNK_SIZE;
-    float tree_z = 8 + z * CHUNK_SIZE;
-    float noise = perlin2d(tree_x , tree_z, 0.05, 3);
-    int tree_y = 10 * noise + 100;
-    for (int i = -2; i <= 2; i++) {
-        for (int j = 0; j < 10; j++) {
-            for (int k = -2; k <= 2; k++) {
-                if (i == 0 && k == 0  && j < 6) {
-                    blocks[8 + i][tree_y + j][8 + k] = Block::Wood;
-                } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    blocks[8 + i][tree_y + j][8 + k] = Block::Leaves;
+    for (int t = 0; t < 20; t++) {
+        int tx = (int)(14 * random() + 2);
+        int tz = (int)(14 * random() + 2);
+        float tree_x = tx + x * CHUNK_SIZE;
+        float tree_z = tz + z * CHUNK_SIZE;
+        float noise = perlin2d(tree_x , tree_z, 0.05, 3);
+        int tree_y = 10 * noise + 100;
+        for (int i = -2; i <= 2; i++) {
+            for (int j = 0; j < 10; j++) {
+                for (int k = -2; k <= 2; k++) {
+                    if (i == 0 && k == 0  && j < 6) {
+                        blocks[tx + i][tree_y + j][tz + k] = Block::Wood;
+                    } else if (i * i + k * k + (j-6) * (j-6) < 8) {
+                        blocks[tx + i][tree_y + j][tz + k] = Block::Leaves;
+                    }
                 }
             }
         }
     }
 
-    float tree2_x = 12 + x * CHUNK_SIZE;
-    float tree2_z = 4 + z * CHUNK_SIZE;
-    float noise2 = perlin2d(tree2_x , tree2_z, 0.05, 3);
-    int tree2_y = 10 * noise2 + 100;
-    for (int i = -2; i <= 2; i++) {
-        for (int j = 0; j < 10; j++) {
-            for (int k = -2; k <= 2; k++) {
-                if (i == 0 && k == 0 && j < 6) {
-                    blocks[12 + i][tree2_y + j][4 + k] = Block::Block::Wood;
-                } else if (i * i + k * k + (j-6) * (j-6) < 8) {
-                    blocks[12 + i][tree2_y + j][4 + k] = Block::Block::Leaves;
-                }
-            }
-        }
-    }
 
 }
 
