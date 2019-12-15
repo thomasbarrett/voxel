@@ -28,7 +28,7 @@
 class Player: public Clickable {
 public:
     dyn_aabb3_t physics_object;
-    aabb3_t *selection;
+    int health = 100;
     float theta;
     float phi;
     float velocity = 1;
@@ -42,22 +42,27 @@ public:
     void setPosition(float x, float y, float z);
     void draw(mat4_t *projection_matrix) {
         voxel::Matrix model_view_matrix = getModelViewMatrix();
-        voxel::Matrix matrix = (voxel::Matrix::Translate({0, 0.5, 0}) * model_view_matrix).tranpose();
+        voxel::Matrix matrix = (voxel::Matrix::Translate({0, 0, 0}) * model_view_matrix).tranpose();
         mesh.draw((mat4_t*) &matrix, projection_matrix);
-        voxel::Matrix matrix2 = (voxel::Matrix::Scale({1, 0.8, 0.4}) * voxel::Matrix::Translate({-1, 1, 0}) * voxel::Matrix::RotateY(1.570795) * model_view_matrix).tranpose();
+        voxel::Matrix matrix2 = (voxel::Matrix::Scale({1, 0.8, 0.4}) * voxel::Matrix::Translate({-1, 0.5, 0}) * voxel::Matrix::RotateY(1.570795) * model_view_matrix).tranpose();
         mesh.draw((mat4_t*) &matrix2, projection_matrix);
-        voxel::Matrix matrix3 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, 0, 0.75}) * model_view_matrix).tranpose();;
+        voxel::Matrix matrix3 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, -0.5, 0.75}) * model_view_matrix).tranpose();;
         mesh.draw((mat4_t*) &matrix3, projection_matrix);
-        voxel::Matrix matrix4 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, 0, 0.75}) * model_view_matrix).tranpose();;
+        voxel::Matrix matrix4 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, -0.5, 0.75}) * model_view_matrix).tranpose();;
         mesh.draw((mat4_t*) &matrix4, projection_matrix);
-        voxel::Matrix matrix5 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, 0, -0.75}) * model_view_matrix).tranpose();;
+        voxel::Matrix matrix5 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, -0.5, -0.75}) * model_view_matrix).tranpose();;
         mesh.draw((mat4_t*) &matrix5, projection_matrix);
-        voxel::Matrix matrix6 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, 0, -0.75}) * model_view_matrix).tranpose();;
+        voxel::Matrix matrix6 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, -0.5, -0.75}) * model_view_matrix).tranpose();;
         mesh.draw((mat4_t*) &matrix6, projection_matrix);
     }
     voxel::Matrix getModelViewMatrix();
     aabb3_t* physicsObject() {
         return (aabb3_t*) &physics_object;
+    }
+    voxel::Array<float, 2> chunk() {
+        int chunkX = floor((float) physics_object.position.x / 2 / 16);
+        int chunkZ = floor((float) physics_object.position.z / 2 / 16);
+        return {chunkX, chunkZ};
     }
     void triggerAction(Player *p) {
         velocity = 4.0 + 2 * random() - 1;

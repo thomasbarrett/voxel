@@ -1,3 +1,5 @@
+window.triangles = 0;
+
 class GraphicsBuffer {
 
     constructor(gl) {
@@ -123,6 +125,7 @@ class Graphics {
         gl.uniform1i(this.program_info.uniformLocations.uSampler, 0);
 
         gl.drawElements(gl.TRIANGLES, 3 * this.buffers[index].n_faces, gl.UNSIGNED_SHORT, 0)
+        window.triangles += this.buffers[index].n_faces;
     }
 }
 

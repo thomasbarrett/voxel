@@ -9,7 +9,7 @@
 #define CHUNK_CAPACITY 1024
 #define VISIBLE_CHUNK_RADIUS 2
 #define PLAYER_COUNT 5
-#define MOB_COUNT 50
+#define MOB_COUNT 20
 
 /*
  * Represents an infinite voxel world composed of chunks.

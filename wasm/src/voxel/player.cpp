@@ -6,7 +6,6 @@
 Player::Player() {
     theta = 0;
     phi = 0;
-    selection = nullptr; 
     update = true;
 
     

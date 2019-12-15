@@ -39,7 +39,6 @@ World::World() {
     vec3_init(&player.physics_object.size, 0.5, 2.0, 0.5);
     vec3_init(&player.physics_object.velocity, 0, 0, 0);
     chunk_count = 0;
-    player.selection = NULL;
     player.theta = 0;
     player.phi = 0;
 
@@ -54,7 +53,7 @@ World::World() {
     // Initialize MOB_COUNT pigs in a random location
     for (int i = 0; i < MOB_COUNT; i++) {
         vec3_init(&mobs[i].physics_object.position, (2 * random() - 1) * 50, 220, (2 * random() - 1) * 50);
-        vec3_init(&mobs[i].physics_object.size,  0.5, 0.5, 1.0);
+        vec3_init(&mobs[i].physics_object.size, 0.75, 1, 1.5);
     }
 }
 
@@ -107,9 +106,7 @@ void world_break_block(World *self, int x, int y, int z) {
     data.z = z;
     data.block = Block::Air;
     self->items.append(new Item{b, {2 * x, 2 * y, 2 * z}});
-    for (int i = 0; i < MOB_COUNT; i++) {
-        self->mobs[i].triggerAction(&self->player);
-    }
+
     send(&data, sizeof(data));
 }
 
@@ -154,30 +151,6 @@ int world_set_chunk(World *self, int x, int z, Chunk *chunk) {
     }
 }
 
-aabb3_t *world_ray_intersect(ray3_t *ray, World *self) {
-    aabb3_t *min_block = NULL;
-    IntersectionResult min = {IntersectionResult::None, 1E10f, nullptr};
-    for (int i = 0; i < self->chunk_count; i++) {
-        Chunk *c = self->chunks[i];
-        aabb3_t* blocks = c->physics_objects;
-        for (int j = 0; j < c->visible_block_count; j++) {
-            aabb3_t *block = &blocks[j];
-            IntersectionResult res = ray_intersects(ray, block);
-            if (res.time() < min.time()) {
-                min = res;
-                min_block = block;
-            }
-        }
-    }
-    
-    if (min.time() < 10) {
-        self->player.selection = min_block;
-    } else {
-        self->player.selection = NULL;
-    }
-
-    return min_block;
-}
 
 void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
   
@@ -206,7 +179,7 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
     }
 
     if ((bottom & ~0x1) && (bottom & 0x1)) {
-        p->physics_object.velocity.y = 12;
+        p->physics_object.velocity.y = 10;
     }
 
     if (p->angry) {
@@ -222,11 +195,11 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
             };
         }
     }
-    if (abs(mob->position.x - p->target[0]) > 3) {
+    if (abs(mob->position.x - p->target[0]) > 1) {
         mob->velocity.x = (p->target[0] - mob->position.x);
     } 
 
-    if (abs(mob->position.z - p->target[1]) > 3) {
+    if (abs(mob->position.z - p->target[1]) > 1) {
         mob->velocity.z = (p->target[1] - mob->position.z);
     } 
 
@@ -241,11 +214,7 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
 }
 
 int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
-    ray3_t ray;
-    ray.position = self->player.physics_object.position;
-    vec3_init(&ray.direction, sin(3.14159 - self->player.theta) * cos(self->player.phi), -sin(self->player.phi), cos(3.14159 - self->player.theta) * cos(self->player.phi));   
-    world_ray_intersect(&ray, self);
-    
+
     vec3_t velocity;
     vec3_t velocity_left;
     vec3_init(&velocity, 0, 0, 8);
@@ -256,8 +225,7 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
     mat4_rotate_y(3.14159 / 2, &rotate_y); 
     mat4_vec3_multiply(&rotate_y, &velocity, &velocity_left);
 
-    self->player.physics_object.velocity.x /= (5 + dt * 5) / 5;
-    self->player.physics_object.velocity.z /= (5 + dt * 5) / 5;
+  
     if (f) {
         self->player.physics_object.velocity.x = -velocity.x;
         self->player.physics_object.velocity.z = -velocity.z;
@@ -296,8 +264,13 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
         }
     }
 
+    if ((bottom & 1)) {
+        self->player.physics_object.velocity.x = 0;
+        self->player.physics_object.velocity.z = 0;
+    }
+
     if (u && (bottom & 1)) {
-        self->player.physics_object.velocity.y = 12;
+        self->player.physics_object.velocity.y = 10;
     }
 
     if (!(bottom & 1)) {
@@ -307,11 +280,29 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
     }
 
     for (int i = 0; i < MOB_COUNT; i++) {
-         
+        for (int j = i + 1; j < MOB_COUNT; j++) {
+            if (aabb3_intersects((aabb3_t *) &self->mobs[i].physics_object, (aabb3_t *) &self->mobs[j].physics_object)) {
+                aabb3_resolve_collision((aabb3_t *) &self->mobs[i].physics_object, &self->mobs[j].physics_object);
+            }
+        }
+    }
+
+    for (int i = 0; i < MOB_COUNT; i++) {
+
         if (aabb3_intersects((aabb3_t *) &self->mobs[i].physics_object, (aabb3_t *) &self->player.physics_object)) {
-            self->player.physics_object.velocity.x = max(abs(self->mobs[i].physics_object.velocity.x),  abs(self->player.physics_object.velocity.x));
+            aabb3_resolve_collision((aabb3_t *) &self->mobs[i].physics_object, &self->player.physics_object);
+            self->player.physics_object.velocity.x = 2 * self->mobs[i].physics_object.velocity.x;
             self->player.physics_object.velocity.y = 5;
-            self->player.physics_object.velocity.z = max(abs(self->mobs[i].physics_object.velocity.z),  abs(self->player.physics_object.velocity.z));
+            self->player.physics_object.velocity.z = 2 * self->mobs[i].physics_object.velocity.z;
+            
+            self->mobs[i].physics_object.velocity.x /= 2;
+            self->mobs[i].physics_object.velocity.z /= 2;
+
+            self->player.health -= 1;
+            update_health(self->player.health);
+            if (self->player.health <= 0) {
+                game_over();
+            }
         }
         
         world_physics_update(self, &self->mobs[i], &self->mobs[i].physics_object, dt);
@@ -379,12 +370,59 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
 }
 
 void world_click_handler(World *self) {
-    if (self->player.selection != NULL) {
-        int x = self->player.selection->position.x / 2;
-        int y = self->player.selection->position.y / 2;
-        int z = self->player.selection->position.z / 2;
+    
+    ray3_t ray;
+    ray.position = self->player.physics_object.position;
+    vec3_init(&ray.direction, sin(3.14159 - self->player.theta) * cos(self->player.phi), -sin(self->player.phi), cos(3.14159 - self->player.theta) * cos(self->player.phi));   
+ 
+    aabb3_t *min_block = nullptr;
+    Player *min_mob = nullptr;
+    IntersectionResult min = {IntersectionResult::None, 1E10f, nullptr};
+    for (int i = 0; i < self->chunk_count; i++) {
+        Chunk *c = self->chunks[i];
+        aabb3_t* blocks = c->physics_objects;
+        for (int j = 0; j < c->visible_block_count; j++) {
+            aabb3_t *block = &blocks[j];
+            IntersectionResult res = ray_intersects(&ray, (aabb3_t*) block);
+            if (res.time() < min.time()) {
+                min = res;
+                min_block = block;
+            }
+        }
+    }
+
+    for (int i = 0; i < MOB_COUNT; i++) {
+        Player *p = &self->mobs[i];
+        IntersectionResult res = ray_intersects(&ray, (aabb3_t*) &p->physics_object);
+        if (res.time() < min.time()) {
+            min = res;
+            min_block = nullptr;
+            min_mob = p;
+        }
+    }
+
+    if (min.time() > 10) {
+        return;
+    }
+
+    if (min_block != nullptr) {
+        int x = min_block->position.x / 2;
+        int y = min_block->position.y / 2;
+        int z = min_block->position.z / 2;
         world_break_block(self, x, y, z);
-  
+    } else if (min_mob != nullptr) {
+        if (!min_mob->angry) {
+            for (int i = 0; i < MOB_COUNT; i++) {
+                self->mobs[i].triggerAction(&self->player);
+            }
+        }
+        min_mob->health -= 34;
+        if (min_mob->health < 0) {
+            min_mob->physics_object.position.x = self->player.physics_object.position.x + 40 * random() - 10;
+            min_mob->physics_object.position.y = 220;
+            min_mob->physics_object.position.z = self->player.physics_object.position.z + 40 * random() - 10;
+        }
+       
     }
 }
 
@@ -414,12 +452,17 @@ void on_animation_frame(World *world, float dt, float aspect) {
     
     world_get_projection_matrix(world, aspect);
     
+    auto chunk = world->player.chunk();
+   
     for (int c = 0; c < world->chunk_count; c++) {
-        world->chunks[c]->updateBuffers();
-        mat4_t model_view_matrix;
-        mat4_translate(0, 0, 0, &model_view_matrix);
-        world->chunks[c]->mesh.draw(&model_view_matrix, &world->projection_matrix);
 
+        if (abs(world->chunks[c]->chunk_x - chunk[0]) <= VISIBLE_CHUNK_RADIUS 
+        && abs(world->chunks[c]->chunk_z - chunk[1]) <= VISIBLE_CHUNK_RADIUS ) {
+            world->chunks[c]->updateBuffers();
+            mat4_t model_view_matrix;
+            mat4_translate(0, 0, 0, &model_view_matrix);
+            world->chunks[c]->mesh.draw(&model_view_matrix, &world->projection_matrix);
+        }
     }
     
     /*

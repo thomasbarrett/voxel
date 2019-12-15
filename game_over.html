@@ -7,7 +7,12 @@
     <title>Document</title>
 </head>
 <body>
-    <canvas id="mesh-view-canvas" width="800" height="600"></canvas>
-    <script src="src/mesh-view.js"></script>
+    <h1>You were brutally trampled by 30-50 feral hogs!</h1>
+    <button id='retry'>Retry</button>
+    <script>
+        document.getElementById('retry').onclick = function() {
+            window.location.replace("/");
+        }
+    </script>
 </body>
 </html>

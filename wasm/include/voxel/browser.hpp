@@ -24,5 +24,5 @@ extern "C" void send(void *data, size_t size);
  * Returns a random float in the range [0, 1).
  */
 extern "C" float random();
-
+extern "C" void update_health(int);
 #endif /* BROWSER_H */

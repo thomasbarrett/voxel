@@ -14,5 +14,5 @@ extern "C" void update_texture_buffer(int, float*, int);
 extern "C" void update_texture(int, int);
 extern "C" void delete_buffer(int);
 extern "C" void draw_buffer(int, mat4_t*, mat4_t*);
-
+extern "C" void game_over();
 #endif

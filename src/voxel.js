@@ -67,6 +67,13 @@ async function load_game_source() {
                 random: function() {
                     return Math.random();
                 },
+                update_health: function(health) {
+                    document.getElementById('health').innerText = `Health: ${health}`
+                },
+                game_over: function() {
+                    window.location.replace("game_over");
+
+                },
                 send: function(pointer, size) {
                     let memory_buffer = instance.exports.memory.buffer;
                     let body = memory_buffer.slice(pointer, pointer + size);
@@ -150,6 +157,7 @@ function game_loop() {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - then;
         then = now;
+        window.triangles = 0;
         update(world, deltaTime > 0.1? 0.1: deltaTime);
         gl.clearColor(0.554, 0.746, 0.988, 1.0); 
         gl.clearDepth(1.0); 
@@ -159,7 +167,7 @@ function game_loop() {
         const aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
         instance.exports.on_animation_frame(world, deltaTime, aspect_ratio);
         frameCounter.increment();
-
+        console.log(`triangles: ${window.triangles}`);
         requestAnimationFrame(run);
     }
 
