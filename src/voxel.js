@@ -57,8 +57,9 @@ function lockChangeAlert() {
 }
 
 async function load_game_source() {
-    const { instance } = await WebAssembly.instantiateStreaming(
-        fetch("./wasm/voxel.wasm"), {
+    const result = await fetch('./wasm/voxel.wasm');
+    const bytes = await result.arrayBuffer();
+    const { instance } = await WebAssembly.instantiate(bytes, {
             env: {
                 sqrt: Math.sqrt,
                 abs: Math.abs,
@@ -83,12 +84,10 @@ async function load_game_source() {
                     const key_str = String.fromCharCode(key);
                     return keyboard.isPressed(key_str);
                 },
-                fetch: function(path, dst) {
-                    console.log(dst);
-                    console.log(instance);
-                    //console.log(size);
-                   // console.log(instance)
-                    /*
+                print_char: function (c) {
+                    console.log(String.fromCharCode(c));
+                },
+                fetch: function(self, path) {
                     let memory = instance.exports.memory.buffer;
                     let uint8_view = new Uint8Array(memory, path);
                     let length = uint8_view.indexOf(0);
@@ -96,13 +95,17 @@ async function load_game_source() {
                     fetch(path_string).then(result => {
                         return result.arrayBuffer();
                     }).then(result => {
-                        let length = Math.min(result.byteLength, size);
+                        let length = result.byteLength;
                         let src_view = new Uint8Array(result);
-                        let dst_view = new Uint8Array(memory, result,length);
-                        for (let i = 0; i < length; i++) {
+                        let pointer = instance.exports.malloc(length);
+                        let array_buffer = instance.exports.memory.buffer;
+                        let dst_view = new Uint8Array(array_buffer, pointer, result.byteLength);
+                        for (let i = 0; i < result.byteLength; i++) {
                             dst_view[i] = src_view[i];
                         }
-                    });*/
+                        instance.exports.fetch_callback(self, pointer, length);
+                        instance.exports.free(pointer);
+                    });
                 },
                 game_over: function() {
                     window.location.replace("game_over");
@@ -120,6 +123,7 @@ async function load_game_source() {
                 __cxa_atexit: function() {
                     console.log('exit');
                 },
+                _ZN5FetchD2Ev: function() {},
                 mem_doctor: function(lo, hi) {
                     let memory_buffer = instance.exports.memory.buffer;
                     let uint32_view = new Uint32Array(memory_buffer, lo, (hi - lo)/4);

@@ -27,6 +27,7 @@ extern "C" float random();
 extern "C" void update_health(int);
 extern "C" int is_key_pressed(int);
 extern "C" void on_key_press(struct World *, int);
-// extern "C" void fetch(const char *, char *,);
+// extern "C" voidf fetch(const char *, char *,);
+extern "C" void print_char(char);
 
 #endif /* BROWSER_H */

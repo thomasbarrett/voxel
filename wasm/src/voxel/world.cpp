@@ -7,6 +7,7 @@
 #include <voxel/graphics.hpp>
 #include <voxel/Mesh.hpp>
 #include <voxel/Item.hpp>
+#include <util/Fetch.hpp>
 
 voxel::Mesh* Block::blocks[256];
 /*
@@ -31,7 +32,11 @@ int block_texture_index[][6][2] = {
  * Constructor for voxel world.
  * Initializes an empty voxel world with the default chunk capacity.
  */
+
+File *file;
+
 World* world_init() {
+    file = new File{"/models/cube.obj"};
     return new World();
 }
 
@@ -64,6 +69,7 @@ World::World() {
  */
 void world_destroy(World *self) {
     free(self);
+    free(file);
 }
 
 
@@ -521,6 +527,6 @@ void on_animation_frame(World *world, float dt, float aspect) {
 
 }
 
-void fetch_callback(char *, size_t data) {
-    print_float(-1);
+void fetch_callback(Fetch *self, char *file, unsigned int length) {
+    self->callback(file, length);
 }
