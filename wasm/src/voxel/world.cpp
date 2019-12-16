@@ -8,6 +8,7 @@
 #include <voxel/Mesh.hpp>
 #include <voxel/Item.hpp>
 
+voxel::Mesh* Block::blocks[256];
 /*
  * The dim(6) is block face, in the order defined in cube.
  * top 
@@ -92,7 +93,7 @@ Block world_set_block(World *self, int x, int y, int z, Block b) {
     int ly = y;
     int lz = z - chunkZ * CHUNK_SIZE;
     Block old = chunk->blocks[lx][ly][lz];
-    chunk->setBlock(lx, ly, lz, Block::Air);
+    chunk->setBlock(lx, ly, lz, b);
     return old;
 }
 
@@ -112,6 +113,14 @@ void world_break_block(World *self, int x, int y, int z) {
 
 int world_get_chunk_count(World *self) {
     return self->chunk_count;
+}
+
+void on_key_press(World *self, int key) {
+    if (key == '1') {
+        self->player.setCurrentBlock(Block::Stone);
+    } else if (key == '2') {
+        self->player.setCurrentBlock(Block::Dirt);
+    }
 }
 
 float* world_get_projection_matrix(World *self, float aspect) {
@@ -160,7 +169,7 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
     mob->position.z += dt * mob->velocity.z;
 
 
-    int bottom = 0;
+    int bottom = Face::None;
     for (int i = 0; i < self->chunk_count; i++) {
         Chunk *c = self->chunks[i];
         aabb3_t* blocks = c->physics_objects;
@@ -172,13 +181,13 @@ void world_physics_update(World *self, Player *p, dyn_aabb3_t *mob, float dt) {
         }
     }
 
-    if (!(bottom & 0x1)) {
+    if (!(bottom & Face::Bottom)) {
       mob->velocity.y -= dt * 20;
     } else if (mob->velocity.y < 0) {
       mob->velocity.y = 0.0;
     }
 
-    if ((bottom & ~0x1) && (bottom & 0x1)) {
+    if ((bottom & ~Face::Bottom) && (bottom & Face::Bottom)) {
         p->physics_object.velocity.y = 10;
     }
 
@@ -252,7 +261,7 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
 
     self->player.physics_object.velocity.y += dt * self->player.physics_object.velocity.y;
 
-    int bottom = 0;
+    int bottom = Face::None;
     for (int i = 0; i < self->chunk_count; i++) {
         Chunk *c = self->chunks[i];
         aabb3_t* blocks = c->physics_objects;
@@ -264,16 +273,16 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
         }
     }
 
-    if ((bottom & 1)) {
+    if ((bottom & Face::Bottom)) {
         self->player.physics_object.velocity.x = 0;
         self->player.physics_object.velocity.z = 0;
     }
 
-    if (u && (bottom & 1)) {
+    if (u && (bottom & Face::Bottom)) {
         self->player.physics_object.velocity.y = 10;
     }
 
-    if (!(bottom & 1)) {
+    if (!(bottom & Face::Bottom)) {
       self->player.physics_object.velocity.y -= dt * 20;
     } else if (self->player.physics_object.velocity.y < 0) {
       self->player.physics_object.velocity.y = 0.0;
@@ -320,11 +329,12 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
         item->position.z += dt * item->velocity.z;
 
         if (aabb3_intersects((aabb3_t *) &self->items[p]->physics_object, (aabb3_t *) &self->player.physics_object)) {
+            self->player.addBlock(self->items[p]->block());
             delete self->items[p];
             self->items[p] = nullptr;
         }
 
-        int bottom = 0;
+        int bottom = Face::None;
         for (int i = 0; i < self->chunk_count; i++) {
             Chunk *c = self->chunks[i];
             aabb3_t* blocks = c->physics_objects;
@@ -336,7 +346,7 @@ int world_update(World *self, float dt, int f, int b, int l, int r, int u) {
             }
         }
 
-        if (!(bottom&1)) {
+        if (!(bottom & Face::Bottom)) {
             item->velocity.y -= dt * 20;
         } else if (item->velocity.y < 0) {
             item->velocity.y = 0.0;
@@ -378,6 +388,7 @@ void world_click_handler(World *self) {
     aabb3_t *min_block = nullptr;
     Player *min_mob = nullptr;
     IntersectionResult min = {IntersectionResult::None, 1E10f, nullptr};
+    
     for (int i = 0; i < self->chunk_count; i++) {
         Chunk *c = self->chunks[i];
         aabb3_t* blocks = c->physics_objects;
@@ -409,7 +420,35 @@ void world_click_handler(World *self) {
         int x = min_block->position.x / 2;
         int y = min_block->position.y / 2;
         int z = min_block->position.z / 2;
-        world_break_block(self, x, y, z);
+        if (!is_key_pressed('z')) {
+            world_break_block(self, x, y, z);
+        } else {
+            if (self->player.removeBlock(self->player.getCurrentBlock())) {
+                Block b = self->player.getCurrentBlock();
+                switch ((int) min) {
+                    case IntersectionResult::Front: 
+                        world_set_block(self, x, y, z - 1, b);
+                        break;
+                    case IntersectionResult::Back:
+                        world_set_block(self, x, y, z + 1, b);
+                        break;
+                    case IntersectionResult::Left:
+                        world_set_block(self, x - 1, y, z, b);
+                        break;
+                    case IntersectionResult::Right:
+                        world_set_block(self, x + 1, y, z, b);
+                        break;
+                    case IntersectionResult::Top:
+                        world_set_block(self, x, y + 1, z, b);
+                        break;
+                    case IntersectionResult::Bottom:
+                        world_set_block(self, x, y - 1, z, b);
+                        break;
+                }  
+            }
+             
+        }
+
     } else if (min_mob != nullptr) {
         if (!min_mob->angry) {
             for (int i = 0; i < MOB_COUNT; i++) {
@@ -476,9 +515,12 @@ void on_animation_frame(World *world, float dt, float aspect) {
         world->mobs[p].draw(&world->projection_matrix);
     }
 
-
     for (int p = 0; p < world->items.size(); p++) {
         world->items[p]->draw(&world->projection_matrix);
     }
 
+}
+
+void fetch_callback(char *, size_t data) {
+    print_float(-1);
 }

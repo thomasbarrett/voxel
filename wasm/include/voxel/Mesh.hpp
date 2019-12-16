@@ -2,8 +2,8 @@
 #define MESH_HPP
 
 
-#include <voxel/ArrayList.hpp>
-#include <voxel/Array.hpp>
+#include <util/ArrayList.hpp>
+#include <util/Array.hpp>
 #include <voxel/graphics.hpp>
 
 namespace voxel {

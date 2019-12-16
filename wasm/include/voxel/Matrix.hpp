@@ -7,7 +7,7 @@
  * \author Thomas Barrett <tbarrett@caltech.edu>s
  * \date Dec 13, 2019
  */
-#include <voxel/Array.hpp>
+#include <util/Array.hpp>
 
 namespace voxel {
 

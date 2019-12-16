@@ -22,7 +22,7 @@ int aabb3_contains(const aabb3_t *a, const vec3_t *b) {
         && abs(a->position.z - b->z) < a->size.z + epsilon;
 }
 
-int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
+Face aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     float x = 0.0;
     float y = 0.0;
     float z = 0.0;
@@ -61,28 +61,28 @@ int aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     if (abs(x) < abs(y) && abs(x) < abs(z)) {
         player->position.x += x;
         if (x > 0) {
-            return 1 << 2;
+            return Face::Left;
         } else {
-            return 1 << 3;
+            return Face::Right;
         }
     }
     if (abs(y) < abs(x) && abs(y) < abs(z)) {
         player->position.y += y;
         if (y > 0) {
-            return 1 << 0;
+            return Face::Bottom;
         } else {
-            return 1 << 1;
+            return Face::Top;
         }
     }
     if (abs(z) < abs(y) && abs(z) < abs(x)) {
         player->position.z += z;
         if (z > 0) {
-            return 1 << 4;
+            return Face::Front;
         } else {
-            return 1 << 5;
+            return Face::Back;
         }
     }
-    return 0;
+    return Face::None;
 }
 
 /**

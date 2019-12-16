@@ -13,6 +13,8 @@ extern int block_texture_index[][6][2];
 
 class Block {
 public:
+    static voxel::Mesh* blocks[256];
+
     enum Value: uint8_t { 
         Air, Stone, Grass, Dirt, CobbleStone, WoodenPlanks,
         Gold, Iron, Coal, Wood, Leaves
@@ -21,7 +23,8 @@ public:
     Block() = default;
     constexpr Block(Value v): value_{v} {};
     constexpr bool operator==(Block b) const { return value_ == b.value_; }
-    constexpr bool operator!=(Block b) const { return value_ != b.value_; }\
+    constexpr bool operator!=(Block b) const { return value_ != b.value_; }
+
     explicit operator int() { return value_; }
 private:
     Value value_;

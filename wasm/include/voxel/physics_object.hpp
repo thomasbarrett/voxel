@@ -12,6 +12,21 @@
 #include <libc/math.hpp>
 
 /**
+ * Indicates the specific face of a block.
+ * 
+ */
+enum Face {
+    None    = 0,
+    Top     = 1 << 0,
+    Bottom  = 1 << 1,
+    Left    = 1 << 2,
+    Right   = 1 << 3,
+    Front   = 1 << 4,
+    Back    = 1 << 5,
+};
+
+
+/**
  * An axis-aligned bounding box is a three dimensional box with both a position
  * and a width. An axis aligned bounding box is static: it does not have a
  * velocity and is considered to have infinite mass. Additionally, an aabb3_t
@@ -49,6 +64,7 @@ typedef struct ray3 {
     vec3_t position;
     vec3_t direction;
 } ray3_t;
+
 
 struct IntersectionResult {
 public:
@@ -122,7 +138,7 @@ int aabb3_contains(const aabb3_t *a, const vec3_t *b);
  * \param b: The dynamic physics object
  * \returns 1 if 
  */
-int aabb3_resolve_collision(const aabb3_t *a, dyn_aabb3_t *b);
+Face aabb3_resolve_collision(const aabb3_t *a, dyn_aabb3_t *b);
 
 /**
  * Calculates the intersection of a ray and a physics object and returns the

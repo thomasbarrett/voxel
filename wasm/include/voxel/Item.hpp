@@ -1,21 +1,53 @@
 #ifndef VOXEL_ITEM_HPP
 #define VOXEL_ITEM_HPP
 
+#include <util/Array.hpp>
+
 #include <voxel/cube.hpp>
 #include <voxel/Chunk.hpp>
-#include <voxel/Array.hpp>
 #include <voxel/Browser.hpp>
 
 extern "C" void print_float(float f);
 
 class Item {
 private:
-    voxel::Mesh mesh;
-    Block block;
+    voxel::Mesh *mesh;
+    Block block_;
 public:
     dyn_aabb3_t physics_object;
 
-    Item(Block block, voxel::Array<float, 3> position) {
+    Item(Block block, voxel::Array<float, 3> position): block_{block} {
+        if (Block::blocks[(int) block] != nullptr) {
+            mesh = Block::blocks[(int) block];
+        } else {
+            Block::blocks[(int)  block] = new voxel::Mesh{};
+            mesh = Block::blocks[(int) block];
+            for (int v = 0; v < 24; v++) {
+                mesh->appendVertex({
+                    single_positions[v][0],
+                    single_positions[v][1],
+                    single_positions[v][2],
+                });
+                mesh->appendTextureCoord({
+                    (single_texture_coords[v][0] + block_texture_index[(int) block][v / 4][0]) / 16,
+                    (single_texture_coords[v][1] + block_texture_index[(int) block][v / 4][1]) / 16
+                });
+                mesh->appendNormal({
+                    single_normals[v][0],
+                    single_normals[v][1],
+                    single_normals[v][2]
+                });
+            }
+            for(int v = 0; v < 12; v++) {
+                mesh->appendFace({
+                    single_indices[3 * v],
+                    single_indices[3 * v + 1],
+                    single_indices[3 * v + 2]
+                });
+            }
+
+            mesh->update();
+        }
         physics_object.position.x = position[0];
         physics_object.position.y = position[1];
         physics_object.position.z = position[2];
@@ -28,31 +60,7 @@ public:
         physics_object.velocity.y = 0;
         physics_object.velocity.z = 0;
 
-        for (int v = 0; v < 24; v++) {
-            mesh.appendVertex({
-                single_positions[v][0],
-                single_positions[v][1],
-                single_positions[v][2],
-            });
-            mesh.appendTextureCoord({
-                (single_texture_coords[v][0] + block_texture_index[(int) block][v / 4][0]) / 16,
-                (single_texture_coords[v][1] + block_texture_index[(int) block][v / 4][1]) / 16
-            });
-            mesh.appendNormal({
-                single_normals[v][0],
-                single_normals[v][1],
-                single_normals[v][2]
-            });
-        }
-        for(int v = 0; v < 12; v++) {
-             mesh.appendFace({
-                single_indices[3 * v],
-                single_indices[3 * v + 1],
-                single_indices[3 * v + 2]
-            });
-        }
-
-        mesh.update();
+        
     
     }
 
@@ -63,7 +71,11 @@ public:
             physics_object.position.z
         })).tranpose(); 
 
-        mesh.draw((mat4_t*) &model_view_matrix, projection_matrix);
+        mesh->draw((mat4_t*) &model_view_matrix, projection_matrix);
+    }
+
+    Block block() {
+        return block_;
     }
 };
 

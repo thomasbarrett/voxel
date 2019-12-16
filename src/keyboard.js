@@ -17,6 +17,10 @@ class KeyboardInput {
         let combos = this.bindings[event];
         return combos.some((keys) => keys.split('-').every((key) => this.keys[key]));
     }
+
+    isPressed(key) {
+        return this.keys[key] == true;
+    }
 }
 
 export { KeyboardInput };

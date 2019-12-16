@@ -32,6 +32,15 @@ const keyboard = new KeyboardInput({
     'placeBlock': ['Control'],
 });
 
+window.addEventListener('keydown', (e) => {
+    console.log(e.key.charCodeAt(0));
+    instance.exports.on_key_press(world, e.key.charCodeAt(0));
+});
+
+window.addEventListener('keyup', (e) => {
+   
+});
+
 function move_handler(e) {
     let dx = e.movementX / canvas.clientWidth;
     let dy = e.movementY / canvas.clientHeight;
@@ -70,6 +79,31 @@ async function load_game_source() {
                 update_health: function(health) {
                     document.getElementById('health').innerText = `Health: ${health}`
                 },
+                is_key_pressed: function(key) {
+                    const key_str = String.fromCharCode(key);
+                    return keyboard.isPressed(key_str);
+                },
+                fetch: function(path, dst) {
+                    console.log(dst);
+                    console.log(instance);
+                    //console.log(size);
+                   // console.log(instance)
+                    /*
+                    let memory = instance.exports.memory.buffer;
+                    let uint8_view = new Uint8Array(memory, path);
+                    let length = uint8_view.indexOf(0);
+                    let path_string = String.fromCharCode(...uint8_view.subarray(0, length));
+                    fetch(path_string).then(result => {
+                        return result.arrayBuffer();
+                    }).then(result => {
+                        let length = Math.min(result.byteLength, size);
+                        let src_view = new Uint8Array(result);
+                        let dst_view = new Uint8Array(memory, result,length);
+                        for (let i = 0; i < length; i++) {
+                            dst_view[i] = src_view[i];
+                        }
+                    });*/
+                },
                 game_over: function() {
                     window.location.replace("game_over");
 
@@ -82,6 +116,9 @@ async function load_game_source() {
                         method: 'post',
                         body
                     });*/
+                },
+                __cxa_atexit: function() {
+                    console.log('exit');
                 },
                 mem_doctor: function(lo, hi) {
                     let memory_buffer = instance.exports.memory.buffer;
@@ -114,6 +151,7 @@ async function load_game_source() {
         }
     );
 
+    console.log(instance);
     window.instance = instance;
     instance.exports.memory.grow(400);
     instance.exports.mem_init();
@@ -167,7 +205,6 @@ function game_loop() {
         const aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
         instance.exports.on_animation_frame(world, deltaTime, aspect_ratio);
         frameCounter.increment();
-        console.log(`triangles: ${window.triangles}`);
         requestAnimationFrame(run);
     }
 
