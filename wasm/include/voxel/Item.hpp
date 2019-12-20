@@ -7,7 +7,8 @@
 #include <voxel/Chunk.hpp>
 #include <voxel/Browser.hpp>
 
-extern "C" void print_float(float f);
+
+extern voxel::OBJLoader *meshLoader;
 
 class Item {
 private:
@@ -20,33 +21,8 @@ public:
         if (Block::blocks[(int) block] != nullptr) {
             mesh = Block::blocks[(int) block];
         } else {
-            Block::blocks[(int)  block] = new voxel::Mesh{};
+            Block::blocks[(int)  block] = &(meshLoader->mesh());
             mesh = Block::blocks[(int) block];
-            for (int v = 0; v < 24; v++) {
-                mesh->appendVertex({
-                    single_positions[v][0],
-                    single_positions[v][1],
-                    single_positions[v][2],
-                });
-                mesh->appendTextureCoord({
-                    (single_texture_coords[v][0] + block_texture_index[(int) block][v / 4][0]) / 16,
-                    (single_texture_coords[v][1] + block_texture_index[(int) block][v / 4][1]) / 16
-                });
-                mesh->appendNormal({
-                    single_normals[v][0],
-                    single_normals[v][1],
-                    single_normals[v][2]
-                });
-            }
-            for(int v = 0; v < 12; v++) {
-                mesh->appendFace({
-                    single_indices[3 * v],
-                    single_indices[3 * v + 1],
-                    single_indices[3 * v + 2]
-                });
-            }
-
-            mesh->update();
         }
         physics_object.position.x = position[0];
         physics_object.position.y = position[1];

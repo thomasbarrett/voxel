@@ -50,57 +50,106 @@ struct File: public Fetch {
 protected:
     char *buffer_ = nullptr;
     unsigned long length_;
+    int loc_ = 0;
 public:
     
     using Fetch::Fetch;
 
-    float atof(const char *s, int &loc) {
-        double a = 0.0;
-        int e = 0;
-        int c;
+    bool hasNext() {
+        return loc_ < length_;
+    }
+
+    char next() {
+        return buffer_[loc_++];
+    }
+
+    bool next(const char *str) {
+        int i = 0;
+        while(str[i] != '\0' && loc_ + i < length_) {
+            if (buffer_[loc_ + i] == str[i]) {
+                i++;
+            } else {
+                return false;
+            }
+        }
+        loc_ += i;
+        return true;
+    }
+
+    int nextInt() {
+        int num = 0;
         int sign = 1;
 
-        if (s[loc] == '+') {
-            loc++;
-        } else if (s[loc] == '-') {
+        while(buffer_[loc_] == ' ' || buffer_[loc_] == '\n') {
+            loc_++;
+        }
+
+        if (buffer_[loc_]== '+') {
+            loc_++;
+        } else if (buffer_[loc_]== '-') {
             sign = -1;
-            loc++;
+            loc_++;
+        }
+
+        while (isdigit(buffer_[loc_])) {
+            num *= 10;
+            num += (buffer_[loc_] - '0');
+            loc_++;
+        }
+
+        return num * sign;
+    }
+
+    float nextFloat() {
+        double a = 0.0;
+        int e = 0;
+        int sign = 1;
+
+        while(buffer_[loc_] == ' ' || buffer_[loc_] == '\n') {
+            loc_++;
+        }
+
+        if (buffer_[loc_]== '+') {
+            loc_++;
+        } else if (buffer_[loc_]== '-') {
+            sign = -1;
+            loc_++;
         }
         
-        while (isdigit(s[loc])) {
+        while (isdigit(buffer_[loc_])) {
             a *= 10.0;
-            a += (s[loc] - '0');
-            loc++;
+            a += (buffer_[loc_]- '0');
+            loc_++;
         }
 
-        if (s[loc] == '.') {
-            loc++;
+        if (buffer_[loc_]== '.') {
+            loc_++;
 
-            while (isdigit(s[loc])) {
+            while (isdigit(buffer_[loc_])) {
                 a *= 10.0;
-                a += (c - '0');
+                a += (buffer_[loc_] - '0');
                 e -= 1;
-                loc++;
+                loc_++;
             }
         }
 
-        if (s[loc] == 'e' || s[loc] == 'E') {
-            loc++;
+        if (buffer_[loc_]== 'e' || buffer_[loc_]== 'E') {
+            loc_++;
 
             int sign = 1;
             int i = 0;
 
-            if (s[loc] == '+') {
-                loc++;
-            } else if (s[loc] == '-') {
+            if (buffer_[loc_]== '+') {
+                loc_++;
+            } else if (buffer_[loc_]== '-') {
                 sign = -1;
-                loc++;
+                loc_++;
             }
 
-            while (isdigit(s[loc])) {
+            while (isdigit(buffer_[loc_])) {
                 i *= 10.0;
-                i += (s[loc] - '0');
-                loc++;
+                i += (buffer_[loc_]- '0');
+                loc_++;
             }
 
             e += i * sign;
@@ -123,7 +172,7 @@ public:
      * \param file: The file data
      * \param length: The length of the file
      */
-    void callback(char *file, unsigned int length) override {
+    virtual void callback(char *file, unsigned int length) override {
         // Forward the call to the base class
         Fetch::callback(file, length);
         
@@ -131,18 +180,6 @@ public:
         length_ = length;
         buffer_ = (char *) malloc(length);
         memcpy(buffer_, file, length);
-        int loc = 0;
-        while (loc < length) {
-            if (buffer_[loc] == ' ') {
-                loc++;
-            } if (isdigit(buffer_[loc]) || buffer_[loc] == '-' || buffer_[loc] == '+') {
-                float f = atof(buffer_, loc);
-                print_float(f);
-            } else {
-                print_char(buffer_[loc]);
-                loc++;
-            }
-        }
     }
 
     ~File() {

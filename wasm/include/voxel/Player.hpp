@@ -16,6 +16,8 @@
 #include <voxel/Browser.hpp>
 #include <voxel/Chunk.hpp>
 
+extern voxel::OBJLoader *pigMeshLoader;
+
 /**
  * A data structure containing all information about a player.
  * A players position and size is given by the physics_object field.
@@ -28,35 +30,26 @@
  */
 class Player {
 public:
+    class World *world_;
     dyn_aabb3_t physics_object;
     int health = 100;
     float theta;
     float phi;
     float velocity = 1;
-    static voxel::Mesh *mesh;
+    voxel::Mesh *mesh;
     voxel::Array<float, 2> target;
     bool angry = false;
     class Player * angry_target = nullptr;
     int blocks[256];
     Block current_block_;
-    bool update;
+    bool update_;
 public:
-    Player();
+    Player(World *world);
     void setPosition(float x, float y, float z);
     void draw(mat4_t *projection_matrix) {
         voxel::Matrix model_view_matrix = getModelViewMatrix();
         voxel::Matrix matrix = (voxel::Matrix::Translate({0, 0, 0}) * model_view_matrix).tranpose();
         mesh->draw((mat4_t*) &matrix, projection_matrix);
-        voxel::Matrix matrix2 = (voxel::Matrix::Scale({1, 0.8, 0.4}) * voxel::Matrix::Translate({-1, 0.5, 0}) * voxel::Matrix::RotateY(1.570795) * model_view_matrix).tranpose();
-        mesh->draw((mat4_t*) &matrix2, projection_matrix);
-        voxel::Matrix matrix3 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, -0.5, 0.75}) * model_view_matrix).tranpose();;
-        mesh->draw((mat4_t*) &matrix3, projection_matrix);
-        voxel::Matrix matrix4 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, -0.5, 0.75}) * model_view_matrix).tranpose();;
-        mesh->draw((mat4_t*) &matrix4, projection_matrix);
-        voxel::Matrix matrix5 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({0.3, -0.5, -0.75}) * model_view_matrix).tranpose();;
-        mesh->draw((mat4_t*) &matrix5, projection_matrix);
-        voxel::Matrix matrix6 = (voxel::Matrix::Scale({0.4, 1, 0.2}) * voxel::Matrix::Translate({-0.3, -0.5, -0.75}) * model_view_matrix).tranpose();;
-        mesh->draw((mat4_t*) &matrix6, projection_matrix);
     }
     voxel::Matrix getModelViewMatrix();
    
@@ -65,6 +58,7 @@ public:
         int chunkZ = floor((float) physics_object.position.z / 2 / 16);
         return {chunkX, chunkZ};
     }
+    void update(float dt);
     void addBlock(Block b) {
         blocks[(int) b]++;
     }

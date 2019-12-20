@@ -29,5 +29,6 @@ extern "C" int is_key_pressed(int);
 extern "C" void on_key_press(struct World *, int);
 // extern "C" voidf fetch(const char *, char *,);
 extern "C" void print_char(char);
+extern "C" void print_float(float f);
 
 #endif /* BROWSER_H */

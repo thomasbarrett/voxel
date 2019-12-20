@@ -10,9 +10,9 @@
  * \return 1 if a and b intersection 0 otherwise.
  */
 int aabb3_intersects(const aabb3_t *a, const aabb3_t *b) {
-    return abs(a->position.x - b->position.x)  < a->size.x + b->size.x
-        && abs(a->position.y - b->position.y)  < a->size.y + b->size.y
-        && abs(a->position.z - b->position.z)  < a->size.z + b->size.z;
+    return abs(a->position.x - b->position.x) < a->size.x + b->size.x
+        && abs(a->position.y - b->position.y) < a->size.y + b->size.y
+        && abs(a->position.z - b->position.z) < a->size.z + b->size.z;
 }
 
 int aabb3_contains(const aabb3_t *a, const vec3_t *b) {
@@ -40,6 +40,7 @@ Face aabb3_resolve_collision(const aabb3_t *block, dyn_aabb3_t *player) {
     float player_b = player->size.y;
     float player_c = player->size.z;
 
+    
     if (this_x > player_x && this_x - player_x < this_a + player_a) {
         x = (this_x - player_x) - (this_a + player_a);
     } else if (player_x - this_x < this_a + player_a) {

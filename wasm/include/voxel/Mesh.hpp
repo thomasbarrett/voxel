@@ -4,7 +4,9 @@
 
 #include <util/ArrayList.hpp>
 #include <util/Array.hpp>
+#include <util/Fetch.hpp>
 #include <voxel/graphics.hpp>
+#include <voxel/Browser.hpp>
 
 namespace voxel {
 
@@ -18,7 +20,7 @@ private:
     ArrayList<Array<float, 3>> vertices;
     ArrayList<Array<float, 3>> normals;
     ArrayList<Array<float, 2>> texture_coords;
-    ArrayList<Array<unsigned short, 3>> faces;   
+    ArrayList<Array<unsigned short, 3>> faces;
 public:
     Mesh() {
         buffer = create_buffer();
@@ -84,7 +86,50 @@ public:
     }
     
     ~Mesh() {
-        delete_buffer(buffer);
+        if (buffer != -1) {
+            delete_buffer(buffer);
+        }
+    }
+};
+
+class OBJLoader: public File {
+private:
+    Mesh mesh_;
+public:
+    OBJLoader(const char *url): File{url} {}
+
+    Mesh& mesh() {
+        return mesh_;
+    } 
+
+    void callback(char *file, unsigned int length) override {
+        File::callback(file, length);
+        while (hasNext()) {
+            while(File::next(" ") || File::next("\n")) {}
+            if (File::next("vt")) {
+                float u = File::nextFloat();
+                float v = File::nextFloat();
+                mesh_.appendTextureCoord({u, v});
+            } else if (File::next("vn")) {
+                float x = File::nextFloat();
+                float y = File::nextFloat();
+                float z = File::nextFloat();
+                mesh_.appendNormal({x, y, z});
+            } else if (File::next("f")) {
+                int v1 = File::nextInt();
+                int v2 = File::nextInt();
+                int v3 = File::nextInt();
+                mesh_.appendFace({v1, v2, v3});
+            } else if (File::next("v")) {
+                float x = File::nextFloat();
+                float y = File::nextFloat();
+                float z = File::nextFloat();
+                mesh_.appendVertex({x, y, z});
+            } else {
+                print_char(File::next());
+            }
+            mesh_.update();
+        }
     }
 };
 

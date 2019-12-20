@@ -56,7 +56,7 @@ public:
     ArrayList(const ArrayList &list) {
         capacity_ = list.capacity_;
         size_ = list.size_;
-        buffer_ = malloc(sizeof(T) * capacity_);
+        buffer_ = (T*) malloc(sizeof(T) * capacity_);
         for (int i = 0; i < size_; i++) {
             buffer_[i] = list.buffer_[i];
         }
@@ -81,6 +81,13 @@ public:
         size_ = 0;
     }
 
+    T* begin() {
+        return &buffer_[0];
+    }
+
+    T* end() {
+        return &buffer_[size_];
+    }
 
     T& operator[](int i) {
         return buffer_[i];
@@ -107,7 +114,7 @@ public:
             buffer_ = (T *) realloc((void*) buffer_, sizeof(T) * capacity_);
         }
         
-        buffer_[size_] = e;
+        buffer_[size_] = (T &&) e;
         size_ += 1;
     }
 

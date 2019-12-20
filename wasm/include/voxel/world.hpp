@@ -7,9 +7,9 @@
 #include <voxel/Item.hpp>
 
 #define CHUNK_CAPACITY 1024
-#define VISIBLE_CHUNK_RADIUS 2
+#define VISIBLE_CHUNK_RADIUS 5
 #define PLAYER_COUNT 5
-#define MOB_COUNT 20
+#define MOB_COUNT 40
 
 /*
  * Represents an infinite voxel world composed of chunks.
@@ -21,12 +21,13 @@ public:
     int chunk_count;
     mat4_t projection_matrix;
     Player player;
-    Chunk* chunks[CHUNK_CAPACITY];
-    Player players[PLAYER_COUNT];
-    Player mobs[MOB_COUNT];
+    voxel::ArrayList<Chunk*> chunks_;
+    voxel::ArrayList<Player*> mobs_;
     voxel::ArrayList<Item*> items;
 public:
     World();
+    static int elevation(int x, int z);
+    static int sea_level();
 };
 
 /**
@@ -51,7 +52,7 @@ Chunk* world_get_chunk_by_index(struct World *self, int i);
 int world_set_chunk(struct World *self, int x, int z, Chunk *chunk);
 aabb3_t *world_ray_intersect(ray3_t *ray, struct World *self);
 
-extern "C" int world_update(struct World *self, float dt, int f, int b, int l, int r, int u);
+extern "C" int world_update(struct World *self, float dt);
 extern "C" void world_click_handler(struct World *self);
 extern "C" void world_move_handler(struct World *self, float dx, float dy);
 
