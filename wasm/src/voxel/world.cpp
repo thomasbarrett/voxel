@@ -43,12 +43,12 @@ int World::sea_level() {
 
 int World::elevation(int x, int z) {
     float noise = perlin2d(x , z, 0.05, 3);
-    return 10 * noise + sea_level() - 3;
+    return 20 * noise + sea_level() - 5;
 }
 
 
 World* world_init() {
-    meshLoader = new voxel::OBJLoader{"/models/cube.obj"};
+    meshLoader = new voxel::OBJLoader{"/models/pig.obj"};
     pigMeshLoader = new voxel::OBJLoader{"/models/pig.obj"};
     return new World();
 }
@@ -64,7 +64,7 @@ World::World(): player{Player{this}} {
         int x = (int)((2 * random() - 1) * 50);
         int z = (int)((2 * random() - 1) * 50);
         vec3_init(&mob->physics_object.position, x, 2 * World::elevation(x, z), z);
-        vec3_init(&mob->physics_object.size, 0.75, 1, 1.5);
+        vec3_init(&mob->physics_object.size, 0.8, 2, 1.5);
         mobs_.append(mob);
     }
 }
@@ -481,15 +481,6 @@ void on_animation_frame(World *world, float dt, float aspect) {
     
     world_get_projection_matrix(world, aspect);
 
-    // Draw all chunks within a VISIBLE_CHUNK_RADIUS distance measured in
-    // taxicab coordinates. 
-    auto pchunk = world->player.chunk();
-    for (auto &chunk: world->chunks_) {
-        if (abs(chunk->x() - pchunk[0]) + abs(chunk->z() - pchunk[1]) <= VISIBLE_CHUNK_RADIUS) {
-            chunk->update();
-            chunk->draw(&world->projection_matrix);
-        }
-    }
 
     // Draw all mobs
     for (auto mob: world->mobs_) {
@@ -499,6 +490,23 @@ void on_animation_frame(World *world, float dt, float aspect) {
     // Draw all items
     for (auto item: world->items){
         item->draw(&world->projection_matrix);
+    }
+    
+      // Draw all chunks within a VISIBLE_CHUNK_RADIUS distance measured in
+    // taxicab coordinates. 
+    auto pchunk = world->player.chunk();
+    for (auto &chunk: world->chunks_) {
+        if (abs(chunk->x() - pchunk[0]) + abs(chunk->z() - pchunk[1]) <= VISIBLE_CHUNK_RADIUS) {
+            chunk->update();
+            chunk->draw_opaque(&world->projection_matrix);
+        }
+    }
+    
+
+    for (auto &chunk: world->chunks_) {
+        if (abs(chunk->x() - pchunk[0]) + abs(chunk->z() - pchunk[1]) <= VISIBLE_CHUNK_RADIUS) {
+            chunk->draw_transparent(&world->projection_matrix);
+        }
     }
 
 }

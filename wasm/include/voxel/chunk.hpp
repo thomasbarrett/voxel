@@ -25,12 +25,16 @@ public:
     constexpr Block(Value v): value_{v} {};
     constexpr bool operator==(Block b) const { return value_ == b.value_; }
     constexpr bool operator!=(Block b) const { return value_ != b.value_; }
-    voxel::Array<float, 2> textureIndex() {
+    voxel::Array<float, 2> textureIndex(Face face) {
         switch (value_) {
             case Value::Stone:
                 return {0, 0};
             case Value::Grass:
-                return {1, 0};
+                if(face == Face::Top) {
+                    return {1, 0};
+                } else if (face == Face::Bottom) {
+                    return {3, 0};
+                } else return {2, 0};
             case Value::Dirt:
                 return {3, 0};
             case Value::CobbleStone:
@@ -38,7 +42,9 @@ public:
             case Value::Water:
                 return {12, 15};
             case Value::Wood:
-                return {4, 1};
+                if (face == Face::Top || face == Face::Bottom) {
+                    return {3, 1};
+                } else return {4, 1};
             case Value::Leaves:
                 return {8, 1};
             default:
@@ -55,7 +61,8 @@ private:
     World *world;
     Block blocks[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
     voxel::ArrayList<aabb3_t> physics_objects_;
-    voxel::Mesh mesh;
+    voxel::Mesh opaque_mesh;
+    voxel::Mesh transparent_mesh;
     bool update_;
 
 private:
@@ -88,7 +95,8 @@ public:
             }  
         }
         physics_objects_ = (voxel::ArrayList<aabb3_t>&&) chunk.physics_objects_;
-        mesh = (voxel::Mesh &&) chunk.mesh;
+        opaque_mesh = (voxel::Mesh &&) chunk.opaque_mesh;
+        transparent_mesh = (voxel::Mesh &&) chunk.transparent_mesh;
         update_ = chunk.update_;
     }
 
@@ -150,9 +158,14 @@ public:
      * Since chunks do not move, the model-view matrix is simply an identity
      * matrix.
      */
-    void draw(mat4_t *projection) {
+    void draw_opaque(mat4_t *projection) {
         voxel::Matrix identity = voxel::Matrix::identity();
-        mesh.draw((mat4_t *) &identity, projection);
+        opaque_mesh.draw((mat4_t *) &identity, projection);
+    }
+
+    void draw_transparent(mat4_t *projection) {
+        voxel::Matrix identity = voxel::Matrix::identity();
+        transparent_mesh.draw((mat4_t *) &identity, projection);
     }
 };
 

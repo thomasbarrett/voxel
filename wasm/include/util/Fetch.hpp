@@ -63,6 +63,10 @@ public:
         return buffer_[loc_++];
     }
 
+    char peek() {
+        return buffer_[loc_];
+    }
+
     bool next(const char *str) {
         int i = 0;
         while(str[i] != '\0' && loc_ + i < length_) {
@@ -75,6 +79,8 @@ public:
         loc_ += i;
         return true;
     }
+
+    
 
     int nextInt() {
         int num = 0;

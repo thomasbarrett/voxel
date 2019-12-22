@@ -7,9 +7,9 @@
 #include <voxel/Item.hpp>
 
 #define CHUNK_CAPACITY 1024
-#define VISIBLE_CHUNK_RADIUS 5
-#define PLAYER_COUNT 5
-#define MOB_COUNT 40
+#define VISIBLE_CHUNK_RADIUS 2
+#define PLAYER_COUNT 3
+#define MOB_COUNT 10
 
 /*
  * Represents an infinite voxel world composed of chunks.

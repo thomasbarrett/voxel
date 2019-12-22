@@ -14,7 +14,7 @@ namespace voxel {
  * Represents a three dimensional mesh.
  */
 class Mesh {
-private:
+public:
     int buffer;
     int modified;
     ArrayList<Array<float, 3>> vertices;
@@ -103,33 +103,66 @@ public:
     } 
 
     void callback(char *file, unsigned int length) override {
+        ArrayList<Array<float, 3>> vertices;
+        ArrayList<Array<float, 3>> normals;
+        ArrayList<Array<float, 2>> texture_coords;
+        int count = 0;
+
         File::callback(file, length);
+
         while (hasNext()) {
             while(File::next(" ") || File::next("\n")) {}
-            if (File::next("vt")) {
+            if (File::next("#")) {
+               while(File::next() != '\n');
+            } else if (File::next("mtllib")) {
+                while(File::next() != '\n');
+            } else if (File::next("usemtl")) {
+                while(File::next() != '\n');
+            } else if (File::next("o")) {
+                while(File::next() != '\n');
+            } else if (File::next("s")) {
+                while(File::next() != '\n');
+            } else if (File::next("vt")) {
                 float u = File::nextFloat();
                 float v = File::nextFloat();
-                mesh_.appendTextureCoord({u, v});
+                texture_coords.append({u, v});
             } else if (File::next("vn")) {
                 float x = File::nextFloat();
                 float y = File::nextFloat();
                 float z = File::nextFloat();
-                mesh_.appendNormal({x, y, z});
-            } else if (File::next("f")) {
-                int v1 = File::nextInt();
-                int v2 = File::nextInt();
-                int v3 = File::nextInt();
-                mesh_.appendFace({v1, v2, v3});
+                normals.append({x, y, z});
             } else if (File::next("v")) {
                 float x = File::nextFloat();
                 float y = File::nextFloat();
                 float z = File::nextFloat();
-                mesh_.appendVertex({x, y, z});
+                vertices.append({x, y, z});
+            } else if (File::next("f")) {
+                int face_count = 0;
+                while (File::next() == ' ') {
+                    int v1 = File::nextInt();
+                    File::next("/");
+                    int vt1 = File::nextInt();
+                    File::next("/");
+                    int vn1 = File::nextInt();
+                    mesh_.appendVertex(vertices[v1 - 1] );
+                    mesh_.appendTextureCoord(texture_coords[vt1 - 1]);
+                    mesh_.appendNormal(normals[vn1 - 1]);
+                    face_count++;
+                }              
+
+                if (face_count == 4) {
+                    mesh_.appendFace({count, count + 1, count + 2});
+                    mesh_.appendFace({count, count + 2, count + 3});
+                }
+
+                count += face_count;
+
             } else {
                 print_char(File::next());
             }
-            mesh_.update();
         }
+        print_char('d');
+        mesh_.update();
     }
 };
 

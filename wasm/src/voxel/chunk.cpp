@@ -168,12 +168,12 @@ int Chunk::isBlockVisible(int x, int y, int z) {
 void Chunk::computeMesh() {
     int block_i = 0;
 
-    mesh.clear();
+    opaque_mesh.clear();
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                if (is_block_transparent(blocks[x][y][z], blocks[x][y][z])) {
+                if (is_block_transparent(blocks[x][y][z], Block::Air)) {
                     continue;
                 }
                 uint8_t visible = isBlockVisible(x, y, z);
@@ -186,16 +186,17 @@ void Chunk::computeMesh() {
                     Block block = blocks[x][y][z];
 
                     for (int v = 0; v < 24; v++) {
-                        mesh.appendVertex({
+                        Face face = (Face) (1 << (v / 4));
+                        opaque_mesh.appendVertex({
                             single_positions[v][0] + 2 * block_x,
                             single_positions[v][1] + 2 * block_y,
                             single_positions[v][2] + 2 * block_z
                         });
-                        mesh.appendTextureCoord({
-                            (single_texture_coords[v][0] + block.textureIndex()[0]) / 16.0,
-                            (single_texture_coords[v][1] + block.textureIndex()[1]) / 16.0
+                        opaque_mesh.appendTextureCoord({
+                            (single_texture_coords[v][0] + block.textureIndex(face)[0]) / 16.0,
+                            (single_texture_coords[v][1] + block.textureIndex(face)[1]) / 16.0
                         });
-                        mesh.appendNormal({
+                        opaque_mesh.appendNormal({
                             single_normals[v][0],
                             single_normals[v][1],
                             single_normals[v][2]
@@ -204,12 +205,12 @@ void Chunk::computeMesh() {
                     for (int i = 0; i < 6; i++) {
                         int face = 1 << i;
                         if (visible & face) {
-                            mesh.appendFace({
+                            opaque_mesh.appendFace({
                                 single_indices[6 * i] + block_i * 24,
                                 single_indices[6 * i + 1] + block_i * 24,
                                 single_indices[6 * i + 2] + block_i * 24,
                             });
-                            mesh.appendFace({
+                            opaque_mesh.appendFace({
                                 single_indices[6 * i + 3] + block_i * 24,
                                 single_indices[6 * i + 4] + block_i * 24,
                                 single_indices[6 * i + 5] + block_i * 24,
@@ -221,11 +222,15 @@ void Chunk::computeMesh() {
             }
         }
     }
+    
+    block_i = 0;
+    opaque_mesh.update();
+    transparent_mesh.clear();
 
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_HEIGHT; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                if (!is_block_transparent(blocks[x][y][z], blocks[x][y][z])) {
+                if (!is_block_transparent(blocks[x][y][z], Block::Air)) {
                     continue;
                 }
                 uint8_t visible = isBlockVisible(x, y, z);
@@ -238,16 +243,18 @@ void Chunk::computeMesh() {
                     Block block = blocks[x][y][z];
 
                     for (int v = 0; v < 24; v++) {
-                        mesh.appendVertex({
+                        Face face = (Face) (1 << (v / 4));
+
+                        transparent_mesh.appendVertex({
                             single_positions[v][0] + 2 * block_x,
                             single_positions[v][1] + 2 * block_y,
                             single_positions[v][2] + 2 * block_z
                         });
-                        mesh.appendTextureCoord({
-                            (single_texture_coords[v][0] + block.textureIndex()[0]) / 16.0,
-                            (single_texture_coords[v][1] + block.textureIndex()[1]) / 16.0
+                        transparent_mesh.appendTextureCoord({
+                            (single_texture_coords[v][0] + block.textureIndex(face)[0]) / 16.0,
+                            (single_texture_coords[v][1] + block.textureIndex(face)[1]) / 16.0
                         });
-                        mesh.appendNormal({
+                        transparent_mesh.appendNormal({
                             single_normals[v][0],
                             single_normals[v][1],
                             single_normals[v][2]
@@ -256,12 +263,12 @@ void Chunk::computeMesh() {
                     for (int i = 0; i < 6; i++) {
                         int face = 1 << i;
                         if (visible & face) {
-                            mesh.appendFace({
+                            transparent_mesh.appendFace({
                                 single_indices[6 * i] + block_i * 24,
                                 single_indices[6 * i + 1] + block_i * 24,
                                 single_indices[6 * i + 2] + block_i * 24,
                             });
-                            mesh.appendFace({
+                            transparent_mesh.appendFace({
                                 single_indices[6 * i + 3] + block_i * 24,
                                 single_indices[6 * i + 4] + block_i * 24,
                                 single_indices[6 * i + 5] + block_i * 24,
@@ -273,7 +280,7 @@ void Chunk::computeMesh() {
             }
         }
     }
-    mesh.update();
+    transparent_mesh.update();
 
 }
 
@@ -307,6 +314,7 @@ void Chunk::computePhysicsObjects() {
  * update flag to false.
  */
 void Chunk::update() {
+
     if (update_) {
         computePhysicsObjects();
         computeMesh();
