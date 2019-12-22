@@ -7,7 +7,7 @@
 #include <voxel/Item.hpp>
 
 #define CHUNK_CAPACITY 1024
-#define VISIBLE_CHUNK_RADIUS 2
+#define VISIBLE_CHUNK_RADIUS 4
 #define PLAYER_COUNT 3
 #define MOB_COUNT 10
 
